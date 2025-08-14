@@ -1,14 +1,15 @@
-<?php
+<?php 
 
 namespace App\Models;
 
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
+use Spatie\Permission\Traits\HasRoles;
 
 class User extends Authenticatable
 {
-    use HasApiTokens, Notifiable;
+    use HasApiTokens, Notifiable, HasRoles;
 
     protected $fillable = [
         'name',
@@ -32,12 +33,6 @@ class User extends Authenticatable
     public function documents()
     {
         return $this->hasMany(Document::class);
-    }
-
-    // Many-to-many relationship with roles
-    public function roles()
-    {
-        return $this->belongsToMany(Role::class);
     }
 
     // A user can have many document reviews
