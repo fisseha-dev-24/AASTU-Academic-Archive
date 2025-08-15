@@ -1,32 +1,23 @@
 <?php
 
+use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
     return view('welcome');
 });
 
-// Admin-only dashboard
-Route::get('/admin', function () {
-    return 'Admin Dashboard';
-})->middleware('role:admin');
+Route::get('/dashboard', function () {
+    return view('dashboard');
+})->middleware(['auth', 'verified'])->name('dashboard');
 
-// Teacher-only page
-Route::get('/teacher', function () {
-    return 'Teacher Dashboard';
-})->middleware('role:teacher');
-
-// Student-only page
-Route::get('/student', function () {
-    return 'Student Dashboard';
-})->middleware('role:student');
-
-
-Route::get('/', function () {
-    return view('welcome');
+Route::middleware('auth')->group(function () {
+    Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
+    Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
+    Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 });
 
-// Test RBAC – only admin role can access
+require __DIR__.'/auth.php';
 Route::get('/admin', function () {
-    return 'Welcome to the Admin Dashboard';
-})->middleware('role:admin');
+    return 'Admin Dashboard for ' . auth()->user()->name;
+})->middleware(['auth', 'role:admin']);

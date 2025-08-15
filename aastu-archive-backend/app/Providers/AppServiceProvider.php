@@ -19,6 +19,11 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        //
+        User::created(function ($user) {
+            if (!$user->hasAnyRole()) {
+                $user->assignRole('student');
+            }
+        });
+    
     }
 }
