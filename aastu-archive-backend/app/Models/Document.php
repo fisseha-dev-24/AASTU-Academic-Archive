@@ -20,8 +20,14 @@ class Document extends Model
         'status'
     ];
 
-    // Document belongs to uploader
+    // Document belongs to uploader (descriptive)
     public function uploader()
+    {
+        return $this->belongsTo(User::class, 'user_id');
+    }
+
+    // Alias for controller compatibility
+    public function user()
     {
         return $this->belongsTo(User::class, 'user_id');
     }

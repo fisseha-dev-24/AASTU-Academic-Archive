@@ -38,6 +38,6 @@ class User extends Authenticatable
     // A user can have many document reviews
     public function reviews()
     {
-        return $this->hasMany(DocumentReview::class);
+        return $this->hasMany(DocumentReview::class, 'reviewer_id');
     }
 }
