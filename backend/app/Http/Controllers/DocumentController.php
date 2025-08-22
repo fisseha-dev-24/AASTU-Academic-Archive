@@ -4,13 +4,14 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\Document;
+use App\Models\AuditLog; 
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Auth;
 
 class DocumentController extends Controller
 {
     /**
-     * Store a new document
+     * Store a new document (Upload)
      */
     public function store(Request $request)
     {
@@ -21,7 +22,7 @@ class DocumentController extends Controller
             'department_id'  => 'required|exists:departments,id',
             'document_type'  => 'required|string|max:50',
             'year'           => 'required|digits:4|integer|min:1900|max:' . date('Y'),
-            'file'           => 'required|mimes:pdf,docx,mp4|max:10240', // 10MB
+            'file'           => 'required|mimes:pdf,docx,mp4|max:10240',
         ]);
 
         $path = $request->file('file')->store('documents', 'public');
@@ -37,10 +38,36 @@ class DocumentController extends Controller
             'user_id'       => Auth::id(),
         ]);
 
+        // Log upload
+        AuditLog::create([
+            'user_id'     => Auth::id(),
+            'document_id' => $doc->id,
+            'action'      => 'upload',
+            'details'     => 'Document uploaded: ' . $doc->title,
+            'ip_address'  => $request->ip(),
+        ]);
+
         return response()->json([
             'message' => 'Document uploaded successfully',
             'document' => $doc
         ], 201);
+    }
+
+    /**
+     * Download a document (logs download event)
+     */
+    public function download(Document $document, Request $request)
+    {
+        // Log download
+        AuditLog::create([
+            'user_id'     => Auth::id(),
+            'document_id' => $document->id,
+            'action'      => 'download',
+            'details'     => 'Document downloaded: ' . $document->title,
+            'ip_address'  => $request->ip(),
+        ]);
+
+        return Storage::disk('public')->download($document->file_path, $document->title . '.' . pathinfo($document->file_path, PATHINFO_EXTENSION));
     }
 
     /**
@@ -50,36 +77,23 @@ class DocumentController extends Controller
     {
         $query = Document::with(['user', 'department']);
 
-        // Filtering
         if ($request->filled('title')) {
             $query->where('title', 'like', '%' . $request->title . '%');
         }
-
         if ($request->filled('year')) {
             $query->where('year', $request->year);
         }
-
         if ($request->filled('department_id')) {
             $query->where('department_id', $request->department_id);
         }
-
         if ($request->filled('document_type')) {
             $query->where('document_type', $request->document_type);
         }
 
-        // Sorting
-        if ($request->filled('sort_by')) {
-            $sortField = $request->sort_by; // e.g. created_at, year
-            $sortOrder = $request->get('order', 'desc'); // default desc
-            $query->orderBy($sortField, $sortOrder);
-        } else {
-            $query->orderBy('created_at', 'desc'); // default sorting
-        }
+        $query->orderBy($request->get('sort_by', 'created_at'), $request->get('order', 'desc'));
 
-        // Pagination (10 per page)
         $documents = $query->paginate(10);
 
-        // Response formatting
         return response()->json([
             'data' => $documents->map(function ($doc) {
                 return [

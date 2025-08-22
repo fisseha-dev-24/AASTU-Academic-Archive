@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Document;
 use App\Models\DocumentReview;
+use App\Models\AuditLog;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -28,6 +29,15 @@ class DocumentReviewController extends Controller
                 'reviewed_at' => now(),
             ]
         );
+
+        // Log approval/rejection
+        AuditLog::create([
+            'user_id'     => Auth::id(),
+            'document_id' => $document->id,
+            'action'      => 'review',
+            'details'     => "Document {$request->status} by " . Auth::user()->name,
+            'ip_address'  => $request->ip(),
+        ]);
 
         return response()->json([
             'message' => 'Review submitted successfully.',
@@ -59,6 +69,15 @@ class DocumentReviewController extends Controller
                     'reviewed_at' => now(),
                 ]
             );
+
+            // Log each bulk approval/rejection
+            AuditLog::create([
+                'user_id'     => Auth::id(),
+                'document_id' => $docId,
+                'action'      => 'review',
+                'details'     => "Document {$request->status} in bulk by " . Auth::user()->name,
+                'ip_address'  => $request->ip(),
+            ]);
         }
 
         return response()->json([
