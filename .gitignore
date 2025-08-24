@@ -6,3 +6,10 @@ frontend/dist/
 
 # Logs
 *.log
+
+# Node modules
+node_modules/
+
+# Next.js build output
+.next/
+out/
