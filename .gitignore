@@ -1,2 +1,8 @@
-node_modules/
-dist/
+# Frontend build junk
+frontend/node_modules/
+frontend/.next/
+frontend/.turbo/
+frontend/dist/
+
+# Logs
+*.log
