@@ -4,11 +4,16 @@ import type React from "react"
 
 import { useState } from "react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { Eye, EyeOff, Mail, Lock, User, ArrowRight, Building, GraduationCap } from "lucide-react"
+import { apiClient, setAuthToken } from "@/lib/api"
 
 export default function SignupPage() {
+  const router = useRouter()
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
+  const [errorMessage, setErrorMessage] = useState("")
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
@@ -19,12 +24,87 @@ export default function SignupPage() {
     studentId: "",
     department: "",
     college: "",
+    termsAccepted: false,
   })
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const clearError = () => {
+    setErrorMessage("")
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    // Handle signup logic here
-    console.log("Signup attempt:", formData)
+    console.log("Form submitted with data:", formData)
+    setIsLoading(true)
+    setErrorMessage("") // Clear any previous errors
+
+    // Basic validation
+    if (!formData.firstName || !formData.lastName || !formData.email || !formData.password || !formData.confirmPassword) {
+      setErrorMessage("Please fill in all required fields")
+      setIsLoading(false)
+      return
+    }
+
+    if (formData.password !== formData.confirmPassword) {
+      setErrorMessage("Passwords do not match")
+      setIsLoading(false)
+      return
+    }
+
+    if (formData.password.length < 8) {
+      setErrorMessage("Password must be at least 8 characters long")
+      setIsLoading(false)
+      return
+    }
+
+    if (!formData.department || formData.department === "") {
+      setErrorMessage("Please select a department")
+      setIsLoading(false)
+      return
+    }
+
+    if (!formData.termsAccepted) {
+      setErrorMessage("Please accept the Terms of Service and Privacy Policy")
+      setIsLoading(false)
+      return
+    }
+
+    console.log("Validation passed, sending request...")
+    try {
+      const response = await apiClient.register({
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        email: formData.email,
+        password: formData.password,
+        password_confirmation: formData.confirmPassword,
+        role: formData.userType,
+        department: formData.department,
+        college: formData.college,
+        studentId: formData.studentId,
+      })
+
+      console.log("Registration response:", response)
+
+      if (response.success) {
+        // Save user info to localStorage if provided
+        if (response.user) {
+          localStorage.setItem('user_info', JSON.stringify(response.user))
+        }
+        
+        // Registration successful - redirect to login page
+        router.push("/login?registered=true")
+      } else {
+        setErrorMessage(response.message || "Registration failed")
+      }
+    } catch (error: any) {
+      console.error("Registration failed:", error)
+      if (error.message) {
+        setErrorMessage(error.message)
+      } else {
+        setErrorMessage("Registration failed. Please try again.")
+      }
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   const departments = [
@@ -116,7 +196,7 @@ export default function SignupPage() {
                     type="text"
                     required
                     value={formData.lastName}
-                    onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
+                    onChange={(e) => { setFormData({ ...formData, lastName: e.target.value }); clearError(); }}
                     className="aastu-input pl-10"
                     placeholder="Last name"
                   />
@@ -139,7 +219,7 @@ export default function SignupPage() {
                   type="email"
                   required
                   value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  onChange={(e) => { setFormData({ ...formData, email: e.target.value }); clearError(); }}
                   className="aastu-input pl-10"
                   placeholder="your.email@aastu.edu.et"
                 />
@@ -183,7 +263,11 @@ export default function SignupPage() {
                   <select
                     id="college"
                     value={formData.college}
-                    onChange={(e) => setFormData({ ...formData, college: e.target.value })}
+                    onChange={(e) => { 
+                      console.log("College selected:", e.target.value);
+                      setFormData({ ...formData, college: e.target.value }); 
+                      clearError(); 
+                    }}
                     className="aastu-input pl-10"
                     required
                   >
@@ -204,7 +288,11 @@ export default function SignupPage() {
                 <select
                   id="department"
                   value={formData.department}
-                  onChange={(e) => setFormData({ ...formData, department: e.target.value })}
+                  onChange={(e) => { 
+                    console.log("Department selected:", e.target.value);
+                    setFormData({ ...formData, department: e.target.value }); 
+                    clearError(); 
+                  }}
                   className="aastu-input"
                   required
                 >
@@ -292,6 +380,8 @@ export default function SignupPage() {
                 name="terms"
                 type="checkbox"
                 required
+                checked={formData.termsAccepted}
+                onChange={(e) => setFormData({ ...formData, termsAccepted: e.target.checked })}
                 className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded mt-1"
               />
               <label htmlFor="terms" className="ml-2 block text-sm text-gray-700">
@@ -306,13 +396,22 @@ export default function SignupPage() {
               </label>
             </div>
 
+            {/* Error Message */}
+            {errorMessage && (
+              <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
+                <strong className="font-bold">Error!</strong>
+                <span className="block sm:inline"> {errorMessage}</span>
+              </div>
+            )}
+
             {/* Submit Button */}
             <button
               type="submit"
-              className="w-full aastu-button-primary flex items-center justify-center space-x-2 py-3"
+              disabled={isLoading}
+              className="w-full aastu-button-primary flex items-center justify-center space-x-2 py-3 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <span>Create Account</span>
-              <ArrowRight className="h-5 w-5" />
+              <span>{isLoading ? "Creating Account..." : "Create Account"}</span>
+              {!isLoading && <ArrowRight className="h-5 w-5" />}
             </button>
           </form>
 

@@ -1,5 +1,6 @@
 "use client"
 import Link from "next/link"
+import { useState, useEffect } from "react"
 import {
   FileText,
   Clock,
@@ -107,7 +108,65 @@ const getStatusColor = (status: string) => {
   }
 }
 
+interface UserInfo {
+  id: number
+  name: string
+  email: string
+  role: string
+  student_id?: string
+  department_id?: number
+  department?: {
+    id: number
+    name: string
+  }
+}
+
 export default function TeacherDashboard() {
+  const [userInfo, setUserInfo] = useState<UserInfo | null>(null)
+  const [welcomeMessage, setWelcomeMessage] = useState("")
+
+  useEffect(() => {
+    // Get user info from localStorage
+    const storedUserInfo = localStorage.getItem('user_info')
+    if (storedUserInfo) {
+      const user = JSON.parse(storedUserInfo)
+      setUserInfo(user)
+      
+      // Generate welcome message based on time of day
+      const hour = new Date().getHours()
+      let timeGreeting = ""
+      if (hour < 12) {
+        timeGreeting = "Good morning"
+      } else if (hour < 17) {
+        timeGreeting = "Good afternoon"
+      } else {
+        timeGreeting = "Good evening"
+      }
+      
+      // Extract first name from full name
+      const firstName = user.name ? user.name.split(' ')[0] : 'Teacher'
+      setWelcomeMessage(`${timeGreeting}, ${firstName}! Welcome back to your dashboard.`)
+    }
+  }, [])
+
+  // Get user initials for avatar
+  const getUserInitials = (name: string) => {
+    if (!name) return "T"
+    return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
+  }
+
+  // Get department name from user info
+  const getDepartmentName = () => {
+    if (userInfo?.department?.name) {
+      return userInfo.department.name
+    }
+    // Fallback based on email or default
+    if (userInfo?.email?.includes('computer')) {
+      return "Computer Science Department"
+    }
+    return "Computer Science Department" // Default fallback
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -118,7 +177,10 @@ export default function TeacherDashboard() {
               <img src="/aastu-university-logo-blue-and-green.png" alt="AASTU Logo" className="h-12 w-12 mr-4" />
               <div>
                 <h1 className="text-2xl font-bold text-gray-900">Teacher Dashboard</h1>
-                <p className="text-sm text-gray-600">Computer Science Department</p>
+                <p className="text-sm text-gray-600">{getDepartmentName()}</p>
+                {welcomeMessage && (
+                  <p className="text-sm text-blue-600 mt-1">{welcomeMessage}</p>
+                )}
               </div>
             </div>
             <div className="flex items-center space-x-4">
@@ -128,11 +190,11 @@ export default function TeacherDashboard() {
               </Button>
               <Avatar>
                 <AvatarImage src="/placeholder.svg?height=40&width=40" />
-                <AvatarFallback>DT</AvatarFallback>
+                <AvatarFallback>{getUserInitials(userInfo?.name || '')}</AvatarFallback>
               </Avatar>
               <div className="text-sm">
-                <p className="font-medium text-gray-900">Dr. Tekle Woldemariam</p>
-                <p className="text-gray-500">Computer Science Department</p>
+                <p className="font-medium text-gray-900">{userInfo?.name || 'Loading...'}</p>
+                <p className="text-gray-500">{getDepartmentName()}</p>
               </div>
             </div>
           </div>

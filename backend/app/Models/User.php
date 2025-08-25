@@ -1,4 +1,4 @@
-<?php 
+<?php
 
 namespace App\Models;
 
@@ -16,6 +16,8 @@ class User extends Authenticatable
         'email',
         'password',
         'department_id',
+        'role',
+        'student_id',
     ];
 
     protected $hidden = [

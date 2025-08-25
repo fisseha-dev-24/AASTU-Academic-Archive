@@ -20,14 +20,67 @@ import {
   Target,
   TrendingUp,
   Activity,
+  Calendar,
+  MessageSquare,
+  Settings,
+  AlertTriangle,
+  CheckCircle,
+  Clock,
+  Eye,
+  Upload,
 } from "lucide-react"
 import Link from "next/link"
+import { useEffect } from "react"
+import { getAuthToken } from "@/lib/api"
+
+interface User {
+  id: number
+  name: string
+  email: string
+  role: string
+  department?: string
+}
 
 export default function CollegeDeanDashboard() {
+  const [user, setUser] = useState<User | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [welcomeMessage, setWelcomeMessage] = useState("")
   const [searchTerm, setSearchTerm] = useState("")
   const [filterStatus, setFilterStatus] = useState("all")
   const [expandedDepartments, setExpandedDepartments] = useState<string[]>([])
   const [selectedDepartment, setSelectedDepartment] = useState<string | null>(null)
+
+  useEffect(() => {
+    // Get user info from localStorage
+    const token = getAuthToken()
+    if (token) {
+      const userInfo = localStorage.getItem('user_info')
+      if (userInfo) {
+        try {
+          const userData = JSON.parse(userInfo)
+          setUser(userData)
+          
+          // Generate welcome message based on time of day
+          const hour = new Date().getHours()
+          let timeGreeting = ""
+          if (hour < 12) {
+            timeGreeting = "Good morning"
+          } else if (hour < 17) {
+            timeGreeting = "Good afternoon"
+          } else {
+            timeGreeting = "Good evening"
+          }
+          
+          // Extract first name from full name
+          const firstName = userData.name ? userData.name.split(' ')[0] : 'Dean'
+          setWelcomeMessage(`${timeGreeting}, ${firstName}! Welcome back to your dashboard.`)
+        } catch (error) {
+          console.error('Error parsing user info:', error)
+        }
+      }
+    }
+    setLoading(false)
+  }, [])
 
   // Mock data for college-level overview
   const collegeStats = {
@@ -166,6 +219,41 @@ export default function CollegeDeanDashboard() {
     return "bg-red-100 text-red-800"
   }
 
+  const recentAlerts = [
+    {
+      id: 1,
+      type: "warning",
+      message: "Department of Computer Science has 5 pending document approvals",
+      timestamp: "2 hours ago",
+    },
+    {
+      id: 2,
+      type: "info",
+      message: "Monthly performance report is ready for review",
+      timestamp: "1 day ago",
+    },
+    {
+      id: 3,
+      type: "success",
+      message: "All departments have submitted their quarterly reports",
+      timestamp: "2 days ago",
+    },
+  ]
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading dashboard...</p>
+        </div>
+      </div>
+    )
+  }
+
+  // Get user's first name for welcome message
+  const firstName = user?.name ? user.name.split(' ')[0] : 'Dean'
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -177,6 +265,9 @@ export default function CollegeDeanDashboard() {
               <div>
                 <h1 className="text-2xl font-bold text-gray-900">College Dean Dashboard</h1>
                 <p className="text-sm text-gray-600">College of Engineering & Technology</p>
+                {welcomeMessage && (
+                  <p className="text-sm text-blue-600 mt-1">{welcomeMessage}</p>
+                )}
               </div>
             </div>
             <div className="flex items-center space-x-4">
@@ -186,8 +277,12 @@ export default function CollegeDeanDashboard() {
               </Button>
               <Avatar>
                 <AvatarImage src="/placeholder.svg?height=40&width=40" />
-                <AvatarFallback>CD</AvatarFallback>
+                <AvatarFallback>{user?.name ? user.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) : 'CD'}</AvatarFallback>
               </Avatar>
+              <div className="text-sm">
+                <p className="font-medium text-gray-900">{user?.name || 'Loading...'}</p>
+                <p className="text-gray-500">College Dean</p>
+              </div>
             </div>
           </div>
         </div>
@@ -196,7 +291,7 @@ export default function CollegeDeanDashboard() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Welcome Section */}
         <div className="mb-8">
-          <h2 className="text-3xl font-bold text-gray-900 mb-2">Welcome back, Dean!</h2>
+          <h2 className="text-3xl font-bold text-gray-900 mb-2">{welcomeMessage || `Welcome back, ${user?.name ? user.name.split(' ')[0] : 'Dean'}!`}</h2>
           <p className="text-gray-600">Manage your college operations and monitor department performance.</p>
         </div>
 

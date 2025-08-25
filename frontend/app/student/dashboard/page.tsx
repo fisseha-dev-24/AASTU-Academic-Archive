@@ -17,8 +17,59 @@ import {
   Download,
 } from "lucide-react"
 import Link from "next/link"
+import { useEffect, useState } from "react"
+import { getAuthToken } from "@/lib/api"
+
+interface User {
+  id: number
+  name: string
+  email: string
+  role: string
+  department?: string
+  student_id?: string
+  department_id?: number
+  created_at?: string
+  updated_at?: string
+}
 
 export default function StudentDashboard() {
+  const [user, setUser] = useState<User | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [welcomeMessage, setWelcomeMessage] = useState("")
+
+  useEffect(() => {
+    // Get user info from localStorage or API
+    const token = getAuthToken()
+    if (token) {
+      // Try to get user info from localStorage first
+      const userInfo = localStorage.getItem('user_info')
+      if (userInfo) {
+        try {
+          const userData = JSON.parse(userInfo)
+          setUser(userData)
+          
+          // Generate welcome message based on time of day
+          const hour = new Date().getHours()
+          let timeGreeting = ""
+          if (hour < 12) {
+            timeGreeting = "Good morning"
+          } else if (hour < 17) {
+            timeGreeting = "Good afternoon"
+          } else {
+            timeGreeting = "Good evening"
+          }
+          
+          // Extract first name from full name
+          const firstName = userData.name ? userData.name.split(' ')[0] : 'Student'
+          setWelcomeMessage(`${timeGreeting}, ${firstName}! Welcome back to your dashboard.`)
+        } catch (error) {
+          console.error('Error parsing user info:', error)
+        }
+      }
+    }
+    setLoading(false)
+  }, [])
+
   // Mock data - in real app this would come from API
   const recentActivity = [
     {
@@ -31,6 +82,21 @@ export default function StudentDashboard() {
     { id: 3, title: "Viewed Computer Networks Lab Report", type: "View", date: "2 days ago" },
   ]
 
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading dashboard...</p>
+        </div>
+      </div>
+    )
+  }
+
+  // Get user's first name for welcome message
+  const firstName = user?.name ? user.name.split(' ')[0] : 'Student'
+  const studentId = user?.student_id || 'AASTU/2021/001' // Fallback if not available
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -42,6 +108,9 @@ export default function StudentDashboard() {
               <div>
                 <h1 className="text-2xl font-bold text-gray-900">Student Dashboard</h1>
                 <p className="text-sm text-gray-600">AASTU Archive System</p>
+                {welcomeMessage && (
+                  <p className="text-sm text-blue-600 mt-1">{welcomeMessage}</p>
+                )}
               </div>
             </div>
             <div className="flex items-center space-x-4">
@@ -51,11 +120,11 @@ export default function StudentDashboard() {
               </Button>
               <Avatar>
                 <AvatarImage src="/placeholder.svg?height=40&width=40" />
-                <AvatarFallback>JD</AvatarFallback>
+                <AvatarFallback>{user?.name ? user.name.split(' ').map(n => n[0]).join('').toUpperCase() : 'U'}</AvatarFallback>
               </Avatar>
               <div className="text-sm">
-                <p className="font-medium text-gray-900">John Doe</p>
-                <p className="text-gray-500">Student ID: AASTU/2021/001</p>
+                <p className="font-medium text-gray-900">{user?.name || 'Student'}</p>
+                <p className="text-gray-500">Student ID: {studentId}</p>
               </div>
             </div>
           </div>
@@ -65,7 +134,7 @@ export default function StudentDashboard() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Welcome Section */}
         <div className="mb-8">
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">Welcome back, John!</h2>
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">{welcomeMessage || `Welcome back, ${firstName}!`}</h2>
           <p className="text-gray-600">Explore the AASTU archive system and access academic resources.</p>
         </div>
 

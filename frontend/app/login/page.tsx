@@ -2,52 +2,88 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
-import { Eye, EyeOff, Mail, Lock, ArrowRight } from "lucide-react"
+import { useRouter, useSearchParams } from "next/navigation"
+import { Eye, EyeOff, Mail, Lock, ArrowRight, CheckCircle } from "lucide-react"
+import { apiClient, setAuthToken } from "@/lib/api"
 
 export default function LoginPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [showPassword, setShowPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
+  const [showSuccessMessage, setShowSuccessMessage] = useState(false)
+  const [errorMessage, setErrorMessage] = useState("")
   const [formData, setFormData] = useState({
     email: "",
     password: "",
     userType: "student",
   })
 
+  useEffect(() => {
+    // Check if user just registered
+    if (searchParams.get('registered') === 'true') {
+      setShowSuccessMessage(true)
+      // Hide success message after 5 seconds
+      setTimeout(() => setShowSuccessMessage(false), 5000)
+    }
+  }, [searchParams])
+
+  const clearError = () => {
+    setErrorMessage("")
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
 
-    // Simulate login process
-    setTimeout(() => {
-      console.log("Login attempt:", formData)
+    try {
+      const response = await apiClient.login({
+        email: formData.email,
+        password: formData.password,
+      })
 
-      // Navigate to appropriate dashboard based on user type
-      switch (formData.userType) {
-        case "student":
-          router.push("/student/dashboard")
-          break
-        case "teacher":
-          router.push("/teacher/dashboard")
-          break
-        case "department_head":
-          router.push("/department/dashboard")
-          break
-        case "college_dean":
-          router.push("/dean/dashboard")
-          break
-        case "admin":
-          router.push("/admin/dashboard")
-          break
-        default:
-          router.push("/student/dashboard")
+      if (response.success && response.token) {
+        setAuthToken(response.token)
+        
+        // Save user info to localStorage for dashboard access
+        if (response.user) {
+          localStorage.setItem('user_info', JSON.stringify(response.user))
+        }
+        
+        // Navigate to the appropriate dashboard based on user role
+        if (response.redirect_url) {
+          router.push(response.redirect_url)
+        } else {
+          // Fallback based on user type selection
+          switch (formData.userType) {
+            case "student":
+              router.push("/student/dashboard")
+              break
+            case "teacher":
+              router.push("/teacher/dashboard")
+              break
+            case "department_head":
+              router.push("/department/dashboard")
+              break
+            case "college_dean":
+              router.push("/dean/dashboard")
+              break
+            case "admin":
+              router.push("/admin/dashboard")
+              break
+            default:
+              router.push("/student/dashboard")
+          }
+        }
       }
-
+    } catch (error: any) {
+      console.error("Login failed:", error)
+      setErrorMessage("Invalid email or password. Please try again.")
+    } finally {
       setIsLoading(false)
-    }, 1000)
+    }
   }
 
   return (
@@ -65,6 +101,30 @@ export default function LoginPage() {
           <h2 className="text-3xl font-bold text-gray-900">Welcome Back</h2>
           <p className="mt-2 text-gray-600">Sign in to access your account</p>
         </div>
+
+        {/* Success Message */}
+        {showSuccessMessage && (
+          <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
+            <div className="flex items-center">
+              <CheckCircle className="h-5 w-5 text-green-400 mr-3" />
+              <div>
+                <h3 className="text-sm font-medium text-green-800">Registration Successful!</h3>
+                <p className="text-sm text-green-700 mt-1">
+                  Your account has been created. Please sign in with your credentials.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Error Message */}
+        {errorMessage && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+            <div className="flex items-center">
+              <div className="text-sm font-medium text-red-800">{errorMessage}</div>
+            </div>
+          </div>
+        )}
 
         {/* Login Form */}
         <div className="aastu-card">
@@ -101,7 +161,7 @@ export default function LoginPage() {
                   type="email"
                   required
                   value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  onChange={(e) => { setFormData({ ...formData, email: e.target.value }); clearError(); }}
                   className="aastu-input pl-10"
                   placeholder="your.email@aastu.edu.et"
                   disabled={isLoading}
@@ -124,7 +184,7 @@ export default function LoginPage() {
                   type={showPassword ? "text" : "password"}
                   required
                   value={formData.password}
-                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                  onChange={(e) => { setFormData({ ...formData, password: e.target.value }); clearError(); }}
                   className="aastu-input pl-10 pr-10"
                   placeholder="Enter your password"
                   disabled={isLoading}
@@ -162,6 +222,13 @@ export default function LoginPage() {
                 Forgot password?
               </Link>
             </div>
+
+            {/* Error Message */}
+            {errorMessage && (
+              <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-red-800">
+                {errorMessage}
+              </div>
+            )}
 
             {/* Submit Button */}
             <button
