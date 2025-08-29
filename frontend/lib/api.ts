@@ -503,6 +503,70 @@ class ApiClient {
       method: 'GET',
     });
   }
+
+  // College Dean APIs
+  async getDeanStats(): Promise<ApiResponse> {
+    return this.request('/dean/stats', {
+      method: 'GET',
+    });
+  }
+
+  async getDeanDepartmentAnalytics(): Promise<ApiResponse> {
+    return this.request('/dean/department-analytics', {
+      method: 'GET',
+    });
+  }
+
+  async getDeanFacultyManagement(): Promise<ApiResponse> {
+    return this.request('/dean/faculty-management', {
+      method: 'GET',
+    });
+  }
+
+  async getDeanInstitutionalReports(params?: any): Promise<ApiResponse> {
+    const queryString = params ? new URLSearchParams(params).toString() : '';
+    return this.request(`/dean/institutional-reports${queryString ? `?${queryString}` : ''}`, {
+      method: 'GET',
+    });
+  }
+
+  async getDeanRecentActivities(): Promise<ApiResponse> {
+    return this.request('/dean/recent-activities', {
+      method: 'GET',
+    });
+  }
+
+  // Admin APIs
+  async getAdminStats(): Promise<ApiResponse> {
+    return this.request('/admin/stats', {
+      method: 'GET',
+    });
+  }
+
+  async getAdminUserManagement(): Promise<ApiResponse> {
+    return this.request('/admin/user-management', {
+      method: 'GET',
+    });
+  }
+
+  async getAdminSystemMonitoring(): Promise<ApiResponse> {
+    return this.request('/admin/system-monitoring', {
+      method: 'GET',
+    });
+  }
+
+  async getAdminAuditLogs(params?: any): Promise<ApiResponse> {
+    const queryString = params ? new URLSearchParams(params).toString() : '';
+    return this.request(`/admin/audit-logs${queryString ? `?${queryString}` : ''}`, {
+      method: 'GET',
+    });
+  }
+
+  async getAdminSystemHealth(): Promise<ApiResponse> {
+    return this.request('/admin/system-health', {
+      method: 'GET',
+    });
+  }
 }
 
 export const apiClient = new ApiClient(API_BASE_URL);

@@ -162,6 +162,42 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/department/reports', [App\Http\Controllers\DepartmentHeadController::class, 'getDepartmentReports']);
 });
 
+// College Dean API routes (protected by auth)
+Route::middleware('auth:sanctum')->group(function () {
+    // Dashboard routes
+    Route::get('/dean/stats', [App\Http\Controllers\DeanController::class, 'getDeanStats']);
+    
+    // Analytics routes
+    Route::get('/dean/department-analytics', [App\Http\Controllers\DeanController::class, 'getDepartmentAnalytics']);
+    
+    // Faculty management routes
+    Route::get('/dean/faculty-management', [App\Http\Controllers\DeanController::class, 'getFacultyManagement']);
+    
+    // Reports routes
+    Route::get('/dean/institutional-reports', [App\Http\Controllers\DeanController::class, 'getInstitutionalReports']);
+    
+    // Activities routes
+    Route::get('/dean/recent-activities', [App\Http\Controllers\DeanController::class, 'getRecentActivities']);
+});
+
+// Admin API routes (protected by auth)
+Route::middleware('auth:sanctum')->group(function () {
+    // Dashboard routes
+    Route::get('/admin/stats', [App\Http\Controllers\AdminController::class, 'getAdminStats']);
+    
+    // User management routes
+    Route::get('/admin/user-management', [App\Http\Controllers\AdminController::class, 'getUserManagement']);
+    
+    // System monitoring routes
+    Route::get('/admin/system-monitoring', [App\Http\Controllers\AdminController::class, 'getSystemMonitoring']);
+    
+    // Audit logs routes
+    Route::get('/admin/audit-logs', [App\Http\Controllers\AdminController::class, 'getAuditLogs']);
+    
+    // System health routes
+    Route::get('/admin/system-health', [App\Http\Controllers\AdminController::class, 'getSystemHealthMetrics']);
+});
+
 // Document preview/download route (protected by auth)
 Route::middleware('auth:sanctum')->get('/documents/{id}/preview', [App\Http\Controllers\DocumentController::class, 'previewDocument']);
 Route::middleware('auth:sanctum')->get('/documents/{id}/download', [App\Http\Controllers\DocumentController::class, 'downloadDocument']);
