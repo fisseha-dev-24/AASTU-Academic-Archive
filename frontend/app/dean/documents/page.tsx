@@ -16,9 +16,12 @@ import {
   Building2,
   CheckCircle,
   Clock,
+  Loader2,
 } from "lucide-react"
+import { apiClient } from "@/lib/api"
 import PageHeader from "@/components/PageHeader"
 import Footer from "@/components/Footer"
+import { toast } from "sonner"
 
 interface User {
   id: number
@@ -39,6 +42,8 @@ interface Document {
   downloads: number
   views: number
   status: string
+  description?: string
+  keywords?: string[]
 }
 
 export default function DeanDocuments() {
@@ -47,9 +52,15 @@ export default function DeanDocuments() {
   const [filterStatus, setFilterStatus] = useState("all")
   const [filterDepartment, setFilterDepartment] = useState("all")
   const [documents, setDocuments] = useState<Document[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    // Load user info from localStorage
+    loadUserData()
+    loadDocuments()
+  }, [])
+
+  const loadUserData = () => {
     const userInfo = localStorage.getItem('user_info')
     if (userInfo) {
       try {
@@ -59,81 +70,71 @@ export default function DeanDocuments() {
         console.error('Error parsing user info:', error)
       }
     }
+  }
 
-    // Mock data for documents
-    const mockDocuments: Document[] = [
-      {
-        id: 1,
-        title: "Advanced Database Systems - Course Materials",
-        author: "Dr. Sarah Johnson",
-        department: "Computer Science",
-        type: "Course Material",
-        year: "2024",
-        uploadDate: "2024-01-15",
-        downloads: 245,
-        views: 567,
-        status: "approved"
-      },
-      {
-        id: 2,
-        title: "Machine Learning Research Paper",
-        author: "Prof. Michael Chen",
-        department: "Computer Science",
-        type: "Research Paper",
-        year: "2024",
-        uploadDate: "2024-01-14",
-        downloads: 189,
-        views: 423,
-        status: "approved"
-      },
-      {
-        id: 3,
-        title: "Circuit Design Manual",
-        author: "Dr. Emily Davis",
-        department: "Electrical Engineering",
-        type: "Lab Manual",
-        year: "2024",
-        uploadDate: "2024-01-13",
-        downloads: 156,
-        views: 298,
-        status: "pending"
-      },
-      {
-        id: 4,
-        title: "Software Architecture Principles",
-        author: "Prof. Ahmed Hassan",
-        department: "Software Engineering",
-        type: "Course Material",
-        year: "2024",
-        uploadDate: "2024-01-12",
-        downloads: 203,
-        views: 445,
-        status: "approved"
-      },
-      {
-        id: 5,
-        title: "Mechanical Design Project Guidelines",
-        author: "Dr. Lisa Wang",
-        department: "Mechanical Engineering",
-        type: "Project Guidelines",
-        year: "2024",
-        uploadDate: "2024-01-11",
-        downloads: 178,
-        views: 312,
-        status: "pending"
+  const loadDocuments = async () => {
+    setLoading(true)
+    setError(null)
+    try {
+      const response = await apiClient.searchDocuments({
+        query: searchTerm,
+        document_type: filterDepartment !== "all" ? filterDepartment : undefined,
+        status: filterStatus !== "all" ? filterStatus : undefined,
+      })
+
+      if (response.success && response.data) {
+        const formattedDocuments = response.data.map((doc: any) => ({
+          id: doc.id,
+          title: doc.title,
+          author: doc.author,
+          department: doc.department,
+          type: doc.type,
+          year: doc.year,
+          uploadDate: doc.date,
+          downloads: doc.downloads || 0,
+          views: 0, // Will be updated when we have view tracking
+          status: doc.status || 'approved',
+          description: doc.description,
+          keywords: doc.keywords
+        }))
+        setDocuments(formattedDocuments)
+      } else {
+        setDocuments([])
+        setError('No documents found')
       }
-    ]
+    } catch (error) {
+      console.error('Error loading documents:', error)
+      setError('Failed to load documents')
+      toast.error('Failed to load documents')
+    } finally {
+      setLoading(false)
+    }
+  }
 
-    setDocuments(mockDocuments)
-  }, [])
+  const handleSearch = () => {
+    loadDocuments()
+  }
 
-  const filteredDocuments = documents.filter((doc) => {
-    const matchesSearch = doc.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         doc.author.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesStatus = filterStatus === "all" || doc.status === filterStatus
-    const matchesDepartment = filterDepartment === "all" || doc.department === filterDepartment
-    return matchesSearch && matchesStatus && matchesDepartment
-  })
+  const handleViewDocument = async (documentId: number) => {
+    try {
+      await apiClient.previewDocument(documentId)
+      console.log('Document preview opened:', documentId)
+    } catch (error) {
+      console.error('Error previewing document:', error)
+      toast.error('Failed to preview document')
+    }
+  }
+
+  const handleDownloadDocument = async (documentId: number) => {
+    try {
+      await apiClient.downloadDocument(documentId)
+      console.log('Document download started:', documentId)
+      toast.success('Download started')
+    } catch (error) {
+      console.error('Error downloading document:', error)
+      toast.error('Failed to download document')
+    }
+  }
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -148,140 +149,188 @@ export default function DeanDocuments() {
     }
   }
 
-  const getTypeBadge = (type: string) => {
-    switch (type) {
-      case "Course Material":
-        return <Badge className="bg-blue-100 text-blue-800">{type}</Badge>
-      case "Research Paper":
-        return <Badge className="bg-purple-100 text-purple-800">{type}</Badge>
-      case "Lab Manual":
-        return <Badge className="bg-emerald-100 text-emerald-800">{type}</Badge>
-      case "Project Guidelines":
-        return <Badge className="bg-orange-100 text-orange-800">{type}</Badge>
-      default:
-        return <Badge variant="outline">{type}</Badge>
-    }
+  const filteredDocuments = documents.filter(doc => {
+    const matchesSearch = doc.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         doc.author.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         doc.department.toLowerCase().includes(searchTerm.toLowerCase())
+    const matchesStatus = filterStatus === "all" || doc.status === filterStatus
+    const matchesDepartment = filterDepartment === "all" || doc.department === filterDepartment
+    
+    return matchesSearch && matchesStatus && matchesDepartment
+  })
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-blue-600" />
+          <p className="text-gray-600">Loading documents...</p>
+        </div>
+      </div>
+    )
   }
 
   return (
     <div className="min-h-screen bg-gray-50">
       <PageHeader
         title="College Documents"
-        subtitle="Manage college-wide materials"
+        subtitle="Manage and monitor all college documents"
         backUrl="/dean/dashboard"
         user={user}
       />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Search and Filter */}
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
-          <h2 className="text-2xl font-bold text-gray-900">Document Management</h2>
-          <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-4">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-              <Input
-                placeholder="Search documents..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 w-64"
-              />
+        {/* Search and Filter Section */}
+        <Card className="shadow-lg border-0 bg-white mb-8">
+          <CardHeader>
+            <CardTitle className="flex items-center">
+              <Search className="h-5 w-5 mr-2" />
+              Search & Filter Documents
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div className="md:col-span-2">
+                <Input
+                  placeholder="Search by title, author, or department..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
+                />
+              </div>
+              <Select value={filterStatus} onValueChange={setFilterStatus}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Filter by status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Status</SelectItem>
+                  <SelectItem value="approved">Approved</SelectItem>
+                  <SelectItem value="pending">Pending</SelectItem>
+                  <SelectItem value="rejected">Rejected</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select value={filterDepartment} onValueChange={setFilterDepartment}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Filter by department" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Departments</SelectItem>
+                  <SelectItem value="Computer Science">Computer Science</SelectItem>
+                  <SelectItem value="Electrical Engineering">Electrical Engineering</SelectItem>
+                  <SelectItem value="Mechanical Engineering">Mechanical Engineering</SelectItem>
+                  <SelectItem value="Civil Engineering">Civil Engineering</SelectItem>
+                  <SelectItem value="Software Engineering">Software Engineering</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
-            <Select value={filterStatus} onValueChange={setFilterStatus}>
-              <SelectTrigger className="w-40">
-                <SelectValue placeholder="Filter by status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="approved">Approved</SelectItem>
-                <SelectItem value="pending">Pending</SelectItem>
-                <SelectItem value="rejected">Rejected</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={filterDepartment} onValueChange={setFilterDepartment}>
-              <SelectTrigger className="w-48">
-                <SelectValue placeholder="Filter by department" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Departments</SelectItem>
-                <SelectItem value="Computer Science">Computer Science</SelectItem>
-                <SelectItem value="Electrical Engineering">Electrical Engineering</SelectItem>
-                <SelectItem value="Software Engineering">Software Engineering</SelectItem>
-                <SelectItem value="Mechanical Engineering">Mechanical Engineering</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
+            <div className="mt-4 flex justify-end">
+              <Button onClick={handleSearch} className="bg-blue-600 hover:bg-blue-700">
+                <Search className="h-4 w-4 mr-2" />
+                Search
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Documents List */}
         <Card className="shadow-lg border-0 bg-white">
           <CardHeader>
-            <CardTitle className="flex items-center text-gray-900">
-              <FileText className="h-5 w-5 mr-2 text-blue-600" />
-              College Documents ({filteredDocuments.length})
+            <CardTitle className="flex items-center justify-between">
+              <div className="flex items-center">
+                <FileText className="h-5 w-5 mr-2" />
+                Documents ({filteredDocuments.length})
+              </div>
+              {error && (
+                <Badge variant="destructive" className="text-xs">
+                  {error}
+                </Badge>
+              )}
             </CardTitle>
-            <CardDescription>Browse and manage all college documents</CardDescription>
+            <CardDescription>
+              All documents across the college with their current status
+            </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              {filteredDocuments.map((doc) => (
-                <div
-                  key={doc.id}
-                  className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
-                >
-                  <div className="flex-1">
-                    <div className="flex items-center space-x-3 mb-2">
-                      <h3 className="font-medium text-gray-900">{doc.title}</h3>
-                      {getStatusBadge(doc.status)}
-                      {getTypeBadge(doc.type)}
-                    </div>
-                    <div className="flex items-center space-x-4 text-sm text-gray-600">
-                      <div className="flex items-center">
-                        <User className="h-4 w-4 mr-1" />
-                        {doc.author}
+            {filteredDocuments.length === 0 ? (
+              <div className="text-center py-8">
+                <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                <p className="text-gray-600">No documents found matching your criteria</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {filteredDocuments.map((doc) => (
+                  <div key={doc.id} className="border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center space-x-2 mb-2">
+                          <h3 className="text-lg font-semibold text-gray-900">{doc.title}</h3>
+                          {getStatusBadge(doc.status)}
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 text-sm text-gray-600 mb-4">
+                          <div className="flex items-center">
+                            <User className="h-4 w-4 mr-2" />
+                            <span>{doc.author}</span>
+                          </div>
+                          <div className="flex items-center">
+                            <Building2 className="h-4 w-4 mr-2" />
+                            <span>{doc.department}</span>
+                          </div>
+                          <div className="flex items-center">
+                            <FileText className="h-4 w-4 mr-2" />
+                            <span>{doc.type}</span>
+                          </div>
+                          <div className="flex items-center">
+                            <Calendar className="h-4 w-4 mr-2" />
+                            <span>{doc.uploadDate}</span>
+                          </div>
+                        </div>
+                        {doc.description && (
+                          <p className="text-gray-600 mb-4">{doc.description}</p>
+                        )}
+                        {doc.keywords && doc.keywords.length > 0 && (
+                          <div className="flex flex-wrap gap-2 mb-4">
+                            {doc.keywords.map((keyword, index) => (
+                              <Badge key={index} variant="outline" className="text-xs">
+                                {keyword}
+                              </Badge>
+                            ))}
+                          </div>
+                        )}
+                        <div className="flex items-center space-x-4 text-sm text-gray-500">
+                          <span>Downloads: {doc.downloads}</span>
+                          <span>Views: {doc.views}</span>
+                          <span>Year: {doc.year}</span>
+                        </div>
                       </div>
-                      <div className="flex items-center">
-                        <Building2 className="h-4 w-4 mr-1" />
-                        {doc.department}
-                      </div>
-                      <div className="flex items-center">
-                        <Calendar className="h-4 w-4 mr-1" />
-                        {doc.year}
-                      </div>
-                      <div className="flex items-center">
-                        <Eye className="h-4 w-4 mr-1" />
-                        {doc.views} views
-                      </div>
-                      <div className="flex items-center">
-                        <Download className="h-4 w-4 mr-1" />
-                        {doc.downloads} downloads
+                      <div className="flex flex-col space-y-2 ml-4">
+                        <Button
+                          onClick={() => handleViewDocument(doc.id)}
+                          variant="outline"
+                          size="sm"
+                          className="w-full"
+                        >
+                          <Eye className="h-4 w-4 mr-1" />
+                          Preview
+                        </Button>
+                        <Button
+                          onClick={() => handleDownloadDocument(doc.id)}
+                          variant="outline"
+                          size="sm"
+                          className="w-full"
+                        >
+                          <Download className="h-4 w-4 mr-1" />
+                          Download
+                        </Button>
                       </div>
                     </div>
                   </div>
-                  <div className="flex items-center space-x-2">
-                    <Button variant="outline" size="sm">
-                      <Eye className="h-4 w-4 mr-1" />
-                      View
-                    </Button>
-                    <Button variant="outline" size="sm">
-                      <Download className="h-4 w-4 mr-1" />
-                      Download
-                    </Button>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            {filteredDocuments.length === 0 && (
-              <div className="text-center py-12">
-                <FileText className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-                <p className="text-gray-600">No documents found matching your criteria.</p>
+                ))}
               </div>
             )}
           </CardContent>
         </Card>
       </div>
       
-      {/* Footer */}
       <Footer />
     </div>
   )

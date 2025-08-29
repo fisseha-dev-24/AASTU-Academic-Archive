@@ -15,9 +15,19 @@ import {
   Calendar,
   FileText,
   TrendingUp,
+  Loader2,
 } from "lucide-react"
+import { apiClient } from "@/lib/api"
 import PageHeader from "@/components/PageHeader"
 import Footer from "@/components/Footer"
+import { toast } from "sonner"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 
 interface User {
   id: number
@@ -37,6 +47,10 @@ interface Faculty {
   joinDate: string
   documentsUploaded: number
   status: string
+  total_uploads: number
+  approved_uploads: number
+  approval_rate: number
+  last_activity: string
 }
 
 export default function DeanFaculty() {
@@ -44,9 +58,15 @@ export default function DeanFaculty() {
   const [searchTerm, setSearchTerm] = useState("")
   const [filterDepartment, setFilterDepartment] = useState("all")
   const [faculty, setFaculty] = useState<Faculty[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    // Load user info from localStorage
+    loadUserData()
+    loadFacultyData()
+  }, [])
+
+  const loadUserData = () => {
     const userInfo = localStorage.getItem('user_info')
     if (userInfo) {
       try {
@@ -56,214 +76,238 @@ export default function DeanFaculty() {
         console.error('Error parsing user info:', error)
       }
     }
+  }
 
-    // Mock data for faculty
-    const mockFaculty: Faculty[] = [
-      {
-        id: 1,
-        name: "Dr. Sarah Johnson",
-        email: "sarah.johnson@aastu.edu.et",
-        department: "Computer Science",
-        position: "Associate Professor",
-        phone: "+251 911 123 456",
-        joinDate: "2020-03-15",
-        documentsUploaded: 45,
-        status: "active"
-      },
-      {
-        id: 2,
-        name: "Prof. Michael Chen",
-        email: "michael.chen@aastu.edu.et",
-        department: "Computer Science",
-        position: "Professor",
-        phone: "+251 922 234 567",
-        joinDate: "2018-09-01",
-        documentsUploaded: 67,
-        status: "active"
-      },
-      {
-        id: 3,
-        name: "Dr. Emily Davis",
-        email: "emily.davis@aastu.edu.et",
-        department: "Electrical Engineering",
-        position: "Assistant Professor",
-        phone: "+251 933 345 678",
-        joinDate: "2021-01-10",
-        documentsUploaded: 23,
-        status: "active"
-      },
-      {
-        id: 4,
-        name: "Prof. Ahmed Hassan",
-        email: "ahmed.hassan@aastu.edu.et",
-        department: "Software Engineering",
-        position: "Professor",
-        phone: "+251 944 456 789",
-        joinDate: "2017-06-20",
-        documentsUploaded: 89,
-        status: "active"
-      },
-      {
-        id: 5,
-        name: "Dr. Lisa Wang",
-        email: "lisa.wang@aastu.edu.et",
-        department: "Mechanical Engineering",
-        position: "Associate Professor",
-        phone: "+251 955 567 890",
-        joinDate: "2019-11-05",
-        documentsUploaded: 34,
-        status: "active"
+  const loadFacultyData = async () => {
+    setLoading(true)
+    setError(null)
+    try {
+      const response = await apiClient.getDeanFacultyManagement()
+      
+      if (response.success && response.data) {
+        const formattedFaculty = response.data.map((member: any) => ({
+          id: member.id,
+          name: member.name,
+          email: member.email,
+          department: member.department,
+          position: 'Faculty Member', // Default position since API doesn't provide it
+          phone: '+251 XXX XXX XXX', // Default phone since API doesn't provide it
+          joinDate: member.created_at || 'Unknown',
+          documentsUploaded: member.total_uploads,
+          status: member.approval_rate > 0 ? 'active' : 'inactive',
+          total_uploads: member.total_uploads,
+          approved_uploads: member.approved_uploads,
+          approval_rate: member.approval_rate,
+          last_activity: member.last_activity
+        }))
+        setFaculty(formattedFaculty)
+      } else {
+        setFaculty([])
+        setError('No faculty data found')
       }
-    ]
+    } catch (error) {
+      console.error('Error loading faculty data:', error)
+      setError('Failed to load faculty data')
+      toast.error('Failed to load faculty data')
+    } finally {
+      setLoading(false)
+    }
+  }
 
-    setFaculty(mockFaculty)
-  }, [])
-
-  const filteredFaculty = faculty.filter((member) => {
-    const matchesSearch = member.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         member.email.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesDepartment = filterDepartment === "all" || member.department === filterDepartment
-    return matchesSearch && matchesDepartment
-  })
+  const getInitials = (name: string) => {
+    return name
+      .split(' ')
+      .map(word => word[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 2)
+  }
 
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "active":
         return <Badge className="bg-green-100 text-green-800">Active</Badge>
       case "inactive":
-        return <Badge className="bg-red-100 text-red-800">Inactive</Badge>
+        return <Badge className="bg-gray-100 text-gray-800">Inactive</Badge>
       default:
         return <Badge variant="secondary">{status}</Badge>
     }
   }
 
-  const getPositionBadge = (position: string) => {
-    switch (position) {
-      case "Professor":
-        return <Badge className="bg-purple-100 text-purple-800">{position}</Badge>
-      case "Associate Professor":
-        return <Badge className="bg-blue-100 text-blue-800">{position}</Badge>
-      case "Assistant Professor":
-        return <Badge className="bg-emerald-100 text-emerald-800">{position}</Badge>
-      default:
-        return <Badge variant="outline">{position}</Badge>
-    }
+  const getPerformanceColor = (rate: number) => {
+    if (rate >= 80) return "text-green-600"
+    if (rate >= 60) return "text-yellow-600"
+    return "text-red-600"
+  }
+
+  const filteredFaculty = faculty.filter(member => {
+    const matchesSearch = member.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         member.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         member.department.toLowerCase().includes(searchTerm.toLowerCase())
+    const matchesDepartment = filterDepartment === "all" || member.department === filterDepartment
+    
+    return matchesSearch && matchesDepartment
+  })
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-blue-600" />
+          <p className="text-gray-600">Loading faculty data...</p>
+        </div>
+      </div>
+    )
   }
 
   return (
     <div className="min-h-screen bg-gray-50">
       <PageHeader
         title="Faculty Management"
-        subtitle="College of Engineering & Technology"
+        subtitle="Manage and monitor faculty members across the college"
         backUrl="/dean/dashboard"
         user={user}
       />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Search and Filter */}
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
-          <h2 className="text-2xl font-bold text-gray-900">Faculty Directory</h2>
-          <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-4">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-              <Input
-                placeholder="Search faculty..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 w-64"
-              />
+        {/* Search and Filter Section */}
+        <Card className="shadow-lg border-0 bg-white mb-8">
+          <CardHeader>
+            <CardTitle className="flex items-center">
+              <Search className="h-5 w-5 mr-2" />
+              Search & Filter Faculty
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="md:col-span-2">
+                <Input
+                  placeholder="Search by name, email, or department..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+              </div>
+              <Select value={filterDepartment} onValueChange={setFilterDepartment}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Filter by department" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Departments</SelectItem>
+                  <SelectItem value="Computer Science">Computer Science</SelectItem>
+                  <SelectItem value="Electrical Engineering">Electrical Engineering</SelectItem>
+                  <SelectItem value="Mechanical Engineering">Mechanical Engineering</SelectItem>
+                  <SelectItem value="Civil Engineering">Civil Engineering</SelectItem>
+                  <SelectItem value="Software Engineering">Software Engineering</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
-            <select
-              value={filterDepartment}
-              onChange={(e) => setFilterDepartment(e.target.value)}
-              className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="all">All Departments</option>
-              <option value="Computer Science">Computer Science</option>
-              <option value="Electrical Engineering">Electrical Engineering</option>
-              <option value="Software Engineering">Software Engineering</option>
-              <option value="Mechanical Engineering">Mechanical Engineering</option>
-            </select>
-          </div>
-        </div>
+          </CardContent>
+        </Card>
 
         {/* Faculty List */}
         <Card className="shadow-lg border-0 bg-white">
           <CardHeader>
-            <CardTitle className="flex items-center text-gray-900">
-              <Users className="h-5 w-5 mr-2 text-blue-600" />
-              Faculty Members ({filteredFaculty.length})
+            <CardTitle className="flex items-center justify-between">
+              <div className="flex items-center">
+                <Users className="h-5 w-5 mr-2" />
+                Faculty Members ({filteredFaculty.length})
+              </div>
+              {error && (
+                <Badge variant="destructive" className="text-xs">
+                  {error}
+                </Badge>
+              )}
             </CardTitle>
-            <CardDescription>Manage and view all faculty members</CardDescription>
+            <CardDescription>
+              Faculty members and their performance metrics
+            </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              {filteredFaculty.map((member) => (
-                <div
-                  key={member.id}
-                  className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
-                >
-                  <div className="flex items-center space-x-4">
-                    <Avatar className="h-12 w-12">
-                      <AvatarFallback className="bg-blue-100 text-blue-700 font-semibold">
-                        {member.name.split(' ').map((n: string) => n[0]).join('').toUpperCase()}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div>
-                      <div className="flex items-center space-x-3 mb-2">
-                        <h3 className="font-medium text-gray-900">{member.name}</h3>
-                        {getStatusBadge(member.status)}
-                        {getPositionBadge(member.position)}
+            {filteredFaculty.length === 0 ? (
+              <div className="text-center py-8">
+                <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                <p className="text-gray-600">No faculty members found matching your criteria</p>
+              </div>
+            ) : (
+              <div className="space-y-6">
+                {filteredFaculty.map((member) => (
+                  <div key={member.id} className="border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow">
+                    <div className="flex items-start space-x-4">
+                      <Avatar className="h-16 w-16">
+                        <AvatarFallback className="text-lg font-semibold">
+                          {getInitials(member.name)}
+                        </AvatarFallback>
+                      </Avatar>
+                      
+                      <div className="flex-1">
+                        <div className="flex items-center justify-between mb-2">
+                          <div>
+                            <h3 className="text-lg font-semibold text-gray-900">{member.name}</h3>
+                            <p className="text-sm text-gray-600">{member.email}</p>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            {getStatusBadge(member.status)}
+                          </div>
+                        </div>
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+                          <div className="flex items-center">
+                            <Building2 className="h-4 w-4 mr-2 text-gray-500" />
+                            <span className="text-sm text-gray-600">{member.department}</span>
+                          </div>
+                          <div className="flex items-center">
+                            <FileText className="h-4 w-4 mr-2 text-gray-500" />
+                            <span className="text-sm text-gray-600">{member.total_uploads} documents</span>
+                          </div>
+                          <div className="flex items-center">
+                            <Calendar className="h-4 w-4 mr-2 text-gray-500" />
+                            <span className="text-sm text-gray-600">Joined: {member.joinDate}</span>
+                          </div>
+                          <div className="flex items-center">
+                            <TrendingUp className="h-4 w-4 mr-2 text-gray-500" />
+                            <span className={`text-sm font-medium ${getPerformanceColor(member.approval_rate)}`}>
+                              {member.approval_rate}% approval rate
+                            </span>
+                          </div>
+                        </div>
+                        
+                        <div className="bg-gray-50 rounded-lg p-4">
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                            <div className="text-center">
+                              <p className="font-semibold text-gray-900">{member.total_uploads}</p>
+                              <p className="text-gray-600">Total Uploads</p>
+                            </div>
+                            <div className="text-center">
+                              <p className="font-semibold text-green-600">{member.approved_uploads}</p>
+                              <p className="text-gray-600">Approved</p>
+                            </div>
+                            <div className="text-center">
+                              <p className="font-semibold text-gray-900">{member.last_activity}</p>
+                              <p className="text-gray-600">Last Activity</p>
+                            </div>
+                          </div>
+                        </div>
                       </div>
-                      <div className="flex items-center space-x-4 text-sm text-gray-600">
-                        <div className="flex items-center">
+                      
+                      <div className="flex flex-col space-y-2">
+                        <Button variant="outline" size="sm" className="w-full">
                           <Mail className="h-4 w-4 mr-1" />
-                          {member.email}
-                        </div>
-                        <div className="flex items-center">
-                          <Building2 className="h-4 w-4 mr-1" />
-                          {member.department}
-                        </div>
-                        <div className="flex items-center">
-                          <Phone className="h-4 w-4 mr-1" />
-                          {member.phone}
-                        </div>
-                        <div className="flex items-center">
-                          <Calendar className="h-4 w-4 mr-1" />
-                          Joined {new Date(member.joinDate).toLocaleDateString()}
-                        </div>
-                        <div className="flex items-center">
+                          Contact
+                        </Button>
+                        <Button variant="outline" size="sm" className="w-full">
                           <FileText className="h-4 w-4 mr-1" />
-                          {member.documentsUploaded} documents
-                        </div>
+                          View Documents
+                        </Button>
                       </div>
                     </div>
                   </div>
-                  <div className="flex items-center space-x-2">
-                    <Button variant="outline" size="sm">
-                      <Mail className="h-4 w-4 mr-1" />
-                      Contact
-                    </Button>
-                    <Button variant="outline" size="sm">
-                      <FileText className="h-4 w-4 mr-1" />
-                      View Documents
-                    </Button>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            {filteredFaculty.length === 0 && (
-              <div className="text-center py-12">
-                <Users className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-                <p className="text-gray-600">No faculty members found matching your criteria.</p>
+                ))}
               </div>
             )}
           </CardContent>
         </Card>
       </div>
       
-      {/* Footer */}
       <Footer />
     </div>
   )
