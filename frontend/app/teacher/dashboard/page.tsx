@@ -1,251 +1,170 @@
 "use client"
-import Link from "next/link"
+
 import { useState, useEffect } from "react"
+import Link from "next/link"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import {
   FileText,
   Clock,
-  Eye,
-  Download,
+  TrendingUp,
+  Award,
   Upload,
+  Users,
+  Calendar,
   BarChart3,
   MessageSquare,
-  Calendar,
-  Award,
-  TrendingUp,
-  AlertCircle,
+  Settings,
+  ArrowRight,
 } from "lucide-react"
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { apiClient } from "@/lib/api"
+import PageHeader from "@/components/PageHeader"
+import Footer from "@/components/Footer"
 
-// Mock data for teacher dashboard
-const teacherStats = {
-  totalDocuments: 156,
-  pendingApproval: 8,
-  approvedDocuments: 142,
-  rejectedDocuments: 6,
-  totalStudents: 89,
-  coursesManaged: 4,
-  monthlyViews: 2847,
-  studentFeedback: 4.8,
-}
-
-const pendingApprovalDocs = [
-  {
-    id: 1,
-    title: "Advanced Database Design - Lecture Notes",
-    course: "Database Systems",
-    uploadedAt: "2024-01-15T10:30:00Z",
-    status: "pending_approval",
-    type: "lecture_notes",
-    size: "2.4 MB",
-  },
-  {
-    id: 2,
-    title: "Software Engineering Best Practices",
-    course: "Software Engineering",
-    uploadedAt: "2024-01-14T16:45:00Z",
-    status: "under_review",
-    type: "reference_material",
-    size: "1.8 MB",
-  },
-  {
-    id: 3,
-    title: "Data Structures Assignment Solutions",
-    course: "Data Structures & Algorithms",
-    uploadedAt: "2024-01-14T09:15:00Z",
-    status: "pending_approval",
-    type: "assignment_solution",
-    size: "3.2 MB",
-  },
-]
-
-const myDocuments = [
-  {
-    id: 1,
-    title: "Introduction to Machine Learning",
-    course: "Artificial Intelligence",
-    status: "approved",
-    views: 245,
-    downloads: 89,
-    uploadedAt: "2024-01-10T14:20:00Z",
-    approvedAt: "2024-01-11T09:30:00Z",
-  },
-  {
-    id: 2,
-    title: "Web Development Framework Comparison",
-    course: "Web Development",
-    status: "approved",
-    views: 189,
-    downloads: 67,
-    uploadedAt: "2024-01-08T11:15:00Z",
-    approvedAt: "2024-01-09T16:45:00Z",
-  },
-  {
-    id: 3,
-    title: "Database Normalization Tutorial",
-    course: "Database Systems",
-    status: "rejected",
-    reason: "Content needs more detailed examples",
-    uploadedAt: "2024-01-05T13:30:00Z",
-    reviewedAt: "2024-01-07T10:20:00Z",
-  },
-]
-
-const getStatusColor = (status: string) => {
-  switch (status) {
-    case "approved":
-      return "bg-green-100 text-green-800"
-    case "pending_approval":
-      return "bg-yellow-100 text-yellow-800"
-    case "rejected":
-      return "bg-red-100 text-red-800"
-    case "under_review":
-      return "bg-blue-100 text-blue-800"
-    default:
-      return "bg-gray-100 text-gray-800"
-  }
-}
-
-interface UserInfo {
+interface User {
   id: number
   name: string
   email: string
   role: string
+  department?: string
   student_id?: string
   department_id?: number
-  department?: {
-    id: number
-    name: string
-  }
+}
+
+interface DashboardStats {
+  total_documents: number
+  pending_approval: number
+  total_views: number
+  total_downloads: number
+  recent_activity: any[]
 }
 
 export default function TeacherDashboard() {
-  const [userInfo, setUserInfo] = useState<UserInfo | null>(null)
+  const [user, setUser] = useState<User | null>(null)
+  const [stats, setStats] = useState<DashboardStats | null>(null)
+  const [loading, setLoading] = useState(true)
   const [welcomeMessage, setWelcomeMessage] = useState("")
 
   useEffect(() => {
-    // Get user info from localStorage
-    const storedUserInfo = localStorage.getItem('user_info')
-    if (storedUserInfo) {
-      const user = JSON.parse(storedUserInfo)
-      setUserInfo(user)
-      
-      // Generate welcome message based on time of day
-      const hour = new Date().getHours()
-      let timeGreeting = ""
-      if (hour < 12) {
-        timeGreeting = "Good morning"
-      } else if (hour < 17) {
-        timeGreeting = "Good afternoon"
-      } else {
-        timeGreeting = "Good evening"
+    // Load user info from localStorage
+    const userInfo = localStorage.getItem('user_info')
+    if (userInfo) {
+      try {
+        const userData = JSON.parse(userInfo)
+        setUser(userData)
+        
+        // Set welcome message
+        const hour = new Date().getHours()
+        let greeting = ""
+        if (hour < 12) greeting = "Good morning"
+        else if (hour < 18) greeting = "Good afternoon"
+        else greeting = "Good evening"
+        
+        setWelcomeMessage(`${greeting}, ${userData.name}!`)
+      } catch (error) {
+        console.error('Error parsing user info:', error)
       }
-      
-      // Extract first name from full name
-      const firstName = user.name ? user.name.split(' ')[0] : 'Teacher'
-      setWelcomeMessage(`${timeGreeting}, ${firstName}! Welcome back to your dashboard.`)
     }
+
+    loadDashboardData()
   }, [])
 
-  // Get user initials for avatar
-  const getUserInitials = (name: string) => {
-    if (!name) return "T"
-    return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
+  const loadDashboardData = async () => {
+    try {
+      const response = await apiClient.getTeacherStats()
+      if (response.success && response.data) {
+        setStats(response.data)
+      }
+    } catch (error) {
+      console.error('Error loading dashboard data:', error)
+    } finally {
+      setLoading(false)
+    }
   }
 
-  // Get department name from user info
   const getDepartmentName = () => {
-    if (userInfo?.department?.name) {
-      return userInfo.department.name
-    }
-    // Fallback based on email or default
-    if (userInfo?.email?.includes('computer')) {
-      return "Computer Science Department"
+    if (user?.department) {
+      return user.department
     }
     return "Computer Science Department" // Default fallback
   }
 
-  return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-6">
-            <div className="flex items-center">
-              <img src="/aastu-university-logo-blue-and-green.png" alt="AASTU Logo" className="h-12 w-12 mr-4" />
-              <div>
-                <h1 className="text-2xl font-bold text-gray-900">Teacher Dashboard</h1>
-                <p className="text-sm text-gray-600">{getDepartmentName()}</p>
-                {welcomeMessage && (
-                  <p className="text-sm text-blue-600 mt-1">{welcomeMessage}</p>
-                )}
-              </div>
-            </div>
-            <div className="flex items-center space-x-4">
-              <Button variant="outline" size="sm">
-                <Download className="h-4 w-4 mr-2" />
-                Export Report
-              </Button>
-              <Avatar>
-                <AvatarImage src="/placeholder.svg?height=40&width=40" />
-                <AvatarFallback>{getUserInitials(userInfo?.name || '')}</AvatarFallback>
-              </Avatar>
-              <div className="text-sm">
-                <p className="font-medium text-gray-900">{userInfo?.name || 'Loading...'}</p>
-                <p className="text-gray-500">{getDepartmentName()}</p>
-              </div>
-            </div>
-          </div>
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading dashboard...</p>
         </div>
-      </header>
+      </div>
+    )
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50">
+      <PageHeader
+        title="Teacher Dashboard"
+        subtitle={getDepartmentName()}
+        backUrl="/"
+        user={user}
+      />
 
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Welcome Message */}
+        {welcomeMessage && (
+          <div className="mb-8">
+            <div className="bg-white rounded-lg shadow-sm border border-blue-200 p-6">
+              <h2 className="text-xl font-semibold text-blue-900 mb-2">{welcomeMessage}</h2>
+              <p className="text-blue-700">Welcome back to your teaching dashboard. Here's what's happening today.</p>
+            </div>
+          </div>
+        )}
+
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <Card>
+          <Card className="shadow-lg border-0 bg-white">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Documents</CardTitle>
+              <CardTitle className="text-sm font-medium text-blue-700">Total Documents</CardTitle>
               <FileText className="h-4 w-4 text-blue-600" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-blue-600">{teacherStats.totalDocuments}</div>
+              <div className="text-2xl font-bold text-blue-600">{stats?.total_documents || 0}</div>
               <p className="text-xs text-gray-600">Across all courses</p>
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="shadow-lg border-0 bg-white">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Pending Approval</CardTitle>
+              <CardTitle className="text-sm font-medium text-yellow-700">Pending Approval</CardTitle>
               <Clock className="h-4 w-4 text-yellow-600" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-yellow-600">{teacherStats.pendingApproval}</div>
+              <div className="text-2xl font-bold text-yellow-600">{stats?.pending_approval || 0}</div>
               <p className="text-xs text-gray-600">Awaiting department approval</p>
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="shadow-lg border-0 bg-white">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Monthly Views</CardTitle>
+              <CardTitle className="text-sm font-medium text-emerald-700">Monthly Views</CardTitle>
               <TrendingUp className="h-4 w-4 text-emerald-600" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-emerald-600">{teacherStats.monthlyViews.toLocaleString()}</div>
+              <div className="text-2xl font-bold text-emerald-600">{(stats?.total_views || 0).toLocaleString()}</div>
               <p className="text-xs text-gray-600">Document views this month</p>
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="shadow-lg border-0 bg-white">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Student Rating</CardTitle>
+              <CardTitle className="text-sm font-medium text-purple-700">Total Downloads</CardTitle>
               <Award className="h-4 w-4 text-purple-600" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-purple-600">{teacherStats.studentFeedback}/5.0</div>
-              <p className="text-xs text-gray-600">Average feedback score</p>
+              <div className="text-2xl font-bold text-purple-600">{(stats?.total_downloads || 0).toLocaleString()}</div>
+              <p className="text-xs text-gray-600">Document downloads</p>
             </CardContent>
           </Card>
         </div>
@@ -253,7 +172,7 @@ export default function TeacherDashboard() {
         {/* Main Action Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
           <Link href="/teacher/upload">
-            <Card className="hover:shadow-lg transition-shadow cursor-pointer border-2 border-blue-200 hover:border-blue-400">
+            <Card className="shadow-lg border-0 bg-white hover:shadow-xl transition-all duration-200 cursor-pointer border-2 border-blue-200 hover:border-blue-400">
               <CardHeader className="text-center pb-4">
                 <div className="mx-auto w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mb-4">
                   <Upload className="h-8 w-8 text-blue-600" />
@@ -265,7 +184,7 @@ export default function TeacherDashboard() {
           </Link>
 
           <Link href="/teacher/my-documents">
-            <Card className="hover:shadow-lg transition-shadow cursor-pointer border-2 border-emerald-200 hover:border-emerald-400">
+            <Card className="shadow-lg border-0 bg-white hover:shadow-xl transition-all duration-200 cursor-pointer border-2 border-emerald-200 hover:border-emerald-400">
               <CardHeader className="text-center pb-4">
                 <div className="mx-auto w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mb-4">
                   <FileText className="h-8 w-8 text-emerald-600" />
@@ -277,143 +196,131 @@ export default function TeacherDashboard() {
           </Link>
 
           <Link href="/teacher/pending-approval">
-            <Card className="hover:shadow-lg transition-shadow cursor-pointer border-2 border-yellow-200 hover:border-yellow-400">
+            <Card className="shadow-lg border-0 bg-white hover:shadow-xl transition-all duration-200 cursor-pointer border-2 border-yellow-200 hover:border-yellow-400">
               <CardHeader className="text-center pb-4">
                 <div className="mx-auto w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center mb-4">
                   <Clock className="h-8 w-8 text-yellow-600" />
                 </div>
                 <CardTitle className="text-yellow-600">Pending Approval</CardTitle>
-                <CardDescription>Track documents awaiting department approval</CardDescription>
+                <CardDescription>Check status of submitted documents</CardDescription>
               </CardHeader>
             </Card>
           </Link>
 
           <Link href="/teacher/analytics">
-            <Card className="hover:shadow-lg transition-shadow cursor-pointer border-2 border-purple-200 hover:border-purple-400">
+            <Card className="shadow-lg border-0 bg-white hover:shadow-xl transition-all duration-200 cursor-pointer border-2 border-purple-200 hover:border-purple-400">
               <CardHeader className="text-center pb-4">
                 <div className="mx-auto w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mb-4">
                   <BarChart3 className="h-8 w-8 text-purple-600" />
                 </div>
                 <CardTitle className="text-purple-600">Analytics</CardTitle>
-                <CardDescription>View document performance and statistics</CardDescription>
+                <CardDescription>View document performance and insights</CardDescription>
               </CardHeader>
             </Card>
           </Link>
 
           <Link href="/teacher/student-feedback">
-            <Card className="hover:shadow-lg transition-shadow cursor-pointer border-2 border-indigo-200 hover:border-indigo-400">
+            <Card className="shadow-lg border-0 bg-white hover:shadow-xl transition-all duration-200 cursor-pointer border-2 border-indigo-200 hover:border-indigo-400">
               <CardHeader className="text-center pb-4">
                 <div className="mx-auto w-16 h-16 bg-indigo-100 rounded-full flex items-center justify-center mb-4">
                   <MessageSquare className="h-8 w-8 text-indigo-600" />
                 </div>
                 <CardTitle className="text-indigo-600">Student Feedback</CardTitle>
-                <CardDescription>Review feedback and ratings from students</CardDescription>
+                <CardDescription>Review student comments and ratings</CardDescription>
               </CardHeader>
             </Card>
           </Link>
 
           <Link href="/teacher/schedule">
-            <Card className="hover:shadow-lg transition-shadow cursor-pointer border-2 border-teal-200 hover:border-teal-400">
+            <Card className="shadow-lg border-0 bg-white hover:shadow-xl transition-all duration-200 cursor-pointer border-2 border-orange-200 hover:border-orange-400">
               <CardHeader className="text-center pb-4">
-                <div className="mx-auto w-16 h-16 bg-teal-100 rounded-full flex items-center justify-center mb-4">
-                  <Calendar className="h-8 w-8 text-teal-600" />
+                <div className="mx-auto w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mb-4">
+                  <Calendar className="h-8 w-8 text-orange-600" />
                 </div>
-                <CardTitle className="text-teal-600">Class Schedule</CardTitle>
-                <CardDescription>Manage your teaching schedule and deadlines</CardDescription>
+                <CardTitle className="text-orange-600">Schedule</CardTitle>
+                <CardDescription>Manage your academic schedule</CardDescription>
               </CardHeader>
             </Card>
           </Link>
         </div>
 
-        {/* Pending Approval Section */}
-        <Card className="mb-8">
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle className="flex items-center">
-                  <AlertCircle className="h-5 w-5 text-yellow-600 mr-2" />
-                  Documents Pending Approval ({teacherStats.pendingApproval})
-                </CardTitle>
-                <CardDescription>
-                  Documents waiting for department head approval before being visible to students
-                </CardDescription>
+        {/* Quick Actions */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <Card className="shadow-lg border-0 bg-white">
+            <CardHeader>
+              <CardTitle className="flex items-center text-gray-900">
+                <TrendingUp className="h-5 w-5 mr-2 text-blue-600" />
+                Recent Activity
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {stats?.recent_activity && stats.recent_activity.length > 0 ? (
+                  stats.recent_activity.map((activity, index) => (
+                    <div key={index} className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
+                      <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-gray-900">{activity.title}</p>
+                        <p className="text-xs text-gray-600">{activity.description}</p>
+                      </div>
+                      <span className="text-xs text-gray-500">{activity.time}</span>
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-center py-8">
+                    <FileText className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+                    <p className="text-gray-600">No recent activity</p>
+                  </div>
+                )}
               </div>
-              <Link href="/teacher/pending-approval">
-                <Button variant="outline" size="sm">
-                  View All
-                </Button>
-              </Link>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {pendingApprovalDocs.slice(0, 3).map((doc) => (
-                <div
-                  key={doc.id}
-                  className="flex items-center justify-between p-4 border border-gray-200 rounded-lg bg-yellow-50"
-                >
-                  <div className="flex-1">
-                    <h4 className="font-medium text-gray-900">{doc.title}</h4>
-                    <p className="text-sm text-gray-600">Course: {doc.course}</p>
-                    <p className="text-xs text-gray-500">
-                      Uploaded: {new Date(doc.uploadedAt).toLocaleDateString()} • Size: {doc.size}
-                    </p>
-                  </div>
-                  <div className="flex items-center space-x-3">
-                    <Badge className={getStatusColor(doc.status)}>{doc.status.replace("_", " ")}</Badge>
-                    <Button size="sm" variant="outline">
-                      <Eye className="h-4 w-4 mr-1" />
-                      View
-                    </Button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
 
-        {/* Recent Documents */}
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle>Recent Documents</CardTitle>
-                <CardDescription>Your recently uploaded documents and their approval status</CardDescription>
+          <Card className="shadow-lg border-0 bg-white">
+            <CardHeader>
+              <CardTitle className="flex items-center text-gray-900">
+                <Users className="h-5 w-5 mr-2 text-green-600" />
+                Quick Actions
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                <Link href="/teacher/upload">
+                  <Button className="w-full justify-start" variant="outline">
+                    <Upload className="h-4 w-4 mr-2" />
+                    Upload New Document
+                    <ArrowRight className="h-4 w-4 ml-auto" />
+                  </Button>
+                </Link>
+                <Link href="/teacher/my-documents">
+                  <Button className="w-full justify-start" variant="outline">
+                    <FileText className="h-4 w-4 mr-2" />
+                    View My Documents
+                    <ArrowRight className="h-4 w-4 ml-auto" />
+                  </Button>
+                </Link>
+                <Link href="/teacher/analytics">
+                  <Button className="w-full justify-start" variant="outline">
+                    <BarChart3 className="h-4 w-4 mr-2" />
+                    View Analytics
+                    <ArrowRight className="h-4 w-4 ml-auto" />
+                  </Button>
+                </Link>
+                <Link href="/teacher/schedule">
+                  <Button className="w-full justify-start" variant="outline">
+                    <Calendar className="h-4 w-4 mr-2" />
+                    Manage Schedule
+                    <ArrowRight className="h-4 w-4 ml-auto" />
+                  </Button>
+                </Link>
               </div>
-              <Link href="/teacher/my-documents">
-                <Button variant="outline" size="sm">
-                  View All
-                </Button>
-              </Link>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {myDocuments.map((doc) => (
-                <div key={doc.id} className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
-                  <div className="flex-1">
-                    <h4 className="font-medium text-gray-900">{doc.title}</h4>
-                    <p className="text-sm text-gray-600">Course: {doc.course}</p>
-                    {doc.status === "approved" && (
-                      <p className="text-xs text-gray-500">
-                        Views: {doc.views} • Downloads: {doc.downloads}
-                      </p>
-                    )}
-                    {doc.status === "rejected" && <p className="text-xs text-red-600">Reason: {doc.reason}</p>}
-                  </div>
-                  <div className="flex items-center space-x-3">
-                    <Badge className={getStatusColor(doc.status)}>{doc.status}</Badge>
-                    <Button size="sm" variant="outline">
-                      <Eye className="h-4 w-4 mr-1" />
-                      View
-                    </Button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        </div>
       </div>
+      
+      {/* Footer */}
+      <Footer />
     </div>
   )
 }

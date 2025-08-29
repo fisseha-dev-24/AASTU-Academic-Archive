@@ -1,5 +1,8 @@
+"use client"
+
 import Link from "next/link"
 import { ArrowRight, BookOpen, Search, Shield, Users, FileText, Video } from "lucide-react"
+import Footer from "@/components/Footer"
 
 export default function LandingPage() {
   return (
@@ -8,18 +11,18 @@ export default function LandingPage() {
       <header className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-4">
-            <div className="flex items-center space-x-3">
-              <img src="/aastu-university-logo-blue-and-green.png" alt="AASTU Logo" className="h-12 w-12" />
+            <div className="flex items-center">
+              <img src="/aastu-university-logo-blue-and-green.png" alt="AASTU Logo" className="h-12 w-12 mr-4" />
               <div>
-                <h1 className="text-xl font-bold text-gray-900">AASTU Archive</h1>
-                <p className="text-sm text-gray-600">Digital Document System</p>
+                <h1 className="text-xl font-bold text-gray-900">AASTU Digital Archive</h1>
+                <p className="text-sm text-gray-600">Academic Document Management System</p>
               </div>
             </div>
             <div className="flex items-center space-x-4">
-              <Link href="/login" className="text-blue-700 hover:text-blue-800 font-medium transition-colors">
+              <Link href="/login" className="text-blue-600 hover:text-blue-700 font-medium">
                 Login
               </Link>
-              <Link href="/signup" className="aastu-button-primary">
+              <Link href="/signup" className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">
                 Sign Up
               </Link>
             </div>
@@ -67,14 +70,9 @@ export default function LandingPage() {
                 className="rounded-2xl shadow-2xl"
               />
               <div className="absolute -bottom-6 -left-6 bg-white p-4 rounded-xl shadow-lg">
-                <div className="flex items-center space-x-3">
-                  <div className="bg-emerald-100 p-2 rounded-lg">
-                    <FileText className="h-6 w-6 text-emerald-600" />
-                  </div>
-                  <div>
-                    <p className="font-semibold text-gray-900">10,000+</p>
-                    <p className="text-sm text-gray-600">Documents</p>
-                  </div>
+                <div>
+                  <p className="font-semibold text-gray-900">10,000+</p>
+                  <p className="text-sm text-gray-600">Documents</p>
                 </div>
               </div>
             </div>
@@ -196,91 +194,7 @@ export default function LandingPage() {
       </section>
 
       {/* Footer */}
-      <footer className="bg-gray-900 text-white py-12">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid md:grid-cols-4 gap-8">
-            <div className="space-y-4">
-              <div className="flex items-center space-x-3">
-                <img src="/aastu-university-logo-white.png" alt="AASTU Logo" className="h-10 w-10" />
-                <div>
-                  <h3 className="font-bold">AASTU Archive</h3>
-                  <p className="text-sm text-gray-400">Digital Repository</p>
-                </div>
-              </div>
-              <p className="text-gray-400 text-sm leading-relaxed">
-                Empowering academic excellence through digital innovation at Addis Ababa Science and Technology
-                University.
-              </p>
-            </div>
-
-            <div>
-              <h4 className="font-semibold mb-4">Quick Links</h4>
-              <ul className="space-y-2 text-sm text-gray-400">
-                <li>
-                  <Link href="/about" className="hover:text-white transition-colors">
-                    About Us
-                  </Link>
-                </li>
-                <li>
-                  <Link href="/features" className="hover:text-white transition-colors">
-                    Features
-                  </Link>
-                </li>
-                <li>
-                  <Link href="/support" className="hover:text-white transition-colors">
-                    Support
-                  </Link>
-                </li>
-                <li>
-                  <Link href="/contact" className="hover:text-white transition-colors">
-                    Contact
-                  </Link>
-                </li>
-              </ul>
-            </div>
-
-            <div>
-              <h4 className="font-semibold mb-4">For Users</h4>
-              <ul className="space-y-2 text-sm text-gray-400">
-                <li>
-                  <Link href="/login" className="hover:text-white transition-colors">
-                    Student Login
-                  </Link>
-                </li>
-                <li>
-                  <Link href="/login" className="hover:text-white transition-colors">
-                    Faculty Login
-                  </Link>
-                </li>
-                <li>
-                  <Link href="/signup" className="hover:text-white transition-colors">
-                    Register
-                  </Link>
-                </li>
-                <li>
-                  <Link href="/help" className="hover:text-white transition-colors">
-                    Help Center
-                  </Link>
-                </li>
-              </ul>
-            </div>
-
-            <div>
-              <h4 className="font-semibold mb-4">Contact Info</h4>
-              <div className="space-y-2 text-sm text-gray-400">
-                <p>Addis Ababa Science and Technology University</p>
-                <p>Addis Ababa, Ethiopia</p>
-                <p>Email: archive@aastu.edu.et</p>
-                <p>Phone: +251-11-XXX-XXXX</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="border-t border-gray-800 mt-8 pt-8 text-center text-sm text-gray-400">
-            <p>&copy; 2024 AASTU Archive System. All rights reserved.</p>
-          </div>
-        </div>
-      </footer>
+      <Footer />
     </div>
   )
 }

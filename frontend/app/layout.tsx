@@ -1,15 +1,13 @@
-import type React from "react"
 import type { Metadata } from "next"
 import { Inter } from "next/font/google"
 import "./globals.css"
+import { AuthProvider } from "@/contexts/AuthContext"
 
 const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
   title: "AASTU Archive System",
-  description: "Addis Ababa Science and Technology University Digital Archive System",
-  keywords: "AASTU, archive, documents, university, Ethiopia",
-    generator: 'v0.app'
+  description: "Digital Document Management System for Addis Ababa Science and Technology University",
 }
 
 export default function RootLayout({
@@ -19,7 +17,11 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className={inter.className}>{children}</body>
+      <body className={inter.className}>
+        <AuthProvider>
+          {children}
+        </AuthProvider>
+      </body>
     </html>
   )
 }

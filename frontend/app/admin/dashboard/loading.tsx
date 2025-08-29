@@ -7,10 +7,7 @@ export default function AdminDashboardLoading() {
             <div className="h-8 w-48 bg-slate-200 rounded animate-pulse mb-2"></div>
             <div className="h-4 w-64 bg-slate-200 rounded animate-pulse"></div>
           </div>
-          <div className="flex items-center space-x-4">
-            <div className="h-10 w-24 bg-slate-200 rounded animate-pulse"></div>
-            <div className="h-10 w-10 bg-slate-200 rounded-full animate-pulse"></div>
-          </div>
+          <div className="h-10 w-10 bg-slate-200 rounded-full animate-pulse"></div>
         </div>
       </div>
 

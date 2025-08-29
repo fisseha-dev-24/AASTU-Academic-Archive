@@ -118,14 +118,6 @@ export default function TeacherReviews() {
       <div className="bg-white border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
-            <div className="flex items-center space-x-4">
-              <Link href="/teacher/dashboard" className="flex items-center text-gray-600 hover:text-gray-900">
-                <ArrowLeft className="h-5 w-5 mr-2" />
-                Back to Dashboard
-              </Link>
-              <div className="h-6 border-l border-gray-300" />
-              <h1 className="text-xl font-semibold text-gray-900">Review Submissions</h1>
-            </div>
           </div>
         </div>
       </div>
@@ -187,7 +179,7 @@ export default function TeacherReviews() {
 
               <div className="flex items-end">
                 <Button variant="outline" className="w-full bg-transparent">
-                  <Filter className="h-4 w-4 mr-2" />
+                  <Filter className="h-4 w-4 " />
                   Clear Filters
                 </Button>
               </div>

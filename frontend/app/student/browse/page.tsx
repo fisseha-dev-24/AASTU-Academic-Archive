@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -11,8 +11,38 @@ import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
 import { Search, Download, Eye, ArrowLeft, Calendar, User, BookOpen, SlidersHorizontal, X } from "lucide-react"
 import Link from "next/link"
+import { apiClient } from "@/lib/api"
+import PageHeader from "@/components/PageHeader"
+import Footer from "@/components/Footer"
+import { toast } from "sonner"
+
+interface User {
+  id: number
+  name: string
+  email: string
+  role: string
+  department?: string
+  student_id?: string
+  department_id?: number
+}
+
+interface Document {
+  id: number
+  title: string
+  author: string
+  department: string
+  type: string
+  date: string
+  year: string
+  downloads: number
+  description: string
+  keywords: string[]
+  fileSize: string
+  pages: number
+}
 
 export default function BrowseArchive() {
+  const [user, setUser] = useState<User | null>(null)
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedType, setSelectedType] = useState("all")
   const [selectedDepartment, setSelectedDepartment] = useState("all")
@@ -23,139 +53,125 @@ export default function BrowseArchive() {
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false)
   const [minDownloads, setMinDownloads] = useState("")
   const [maxDownloads, setMaxDownloads] = useState("")
+  const [documents, setDocuments] = useState<Document[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [pagination, setPagination] = useState({
+    current_page: 1,
+    last_page: 1,
+    per_page: 20,
+    total: 0,
+  })
 
-  // Mock data - in real app this would come from API
-  const documents = [
-    {
-      id: 1,
-      title: "Machine Learning Applications in Healthcare",
-      author: "Sarah Johnson",
-      department: "Computer Science",
-      type: "Thesis",
-      date: "2024-01-15",
-      year: "2024",
-      downloads: 45,
-      description:
-        "A comprehensive study on applying machine learning algorithms to healthcare diagnostics and patient care optimization...",
-      keywords: ["machine learning", "healthcare", "AI", "diagnostics", "neural networks"],
-      fileSize: "2.4 MB",
-      pages: 120,
-    },
-    {
-      id: 2,
-      title: "Sustainable Energy Systems Design",
-      author: "Michael Chen",
-      department: "Electrical Engineering",
-      type: "Project Report",
-      date: "2024-01-12",
-      year: "2024",
-      downloads: 32,
-      description:
-        "Design and implementation of renewable energy systems for rural communities with focus on solar and wind integration...",
-      keywords: ["renewable energy", "sustainability", "solar power", "design", "wind energy"],
-      fileSize: "1.8 MB",
-      pages: 85,
-    },
-    {
-      id: 3,
-      title: "Advanced Database Optimization Techniques",
-      author: "Emily Davis",
-      department: "Computer Science",
-      type: "Research Paper",
-      date: "2024-01-10",
-      year: "2024",
-      downloads: 28,
-      description: "Novel approaches to database query optimization and performance tuning...",
-      keywords: ["database", "optimization", "performance", "SQL"],
-      fileSize: "1.5 MB",
-      pages: 90,
-    },
-    {
-      id: 4,
-      title: "Structural Analysis of High-Rise Buildings",
-      author: "David Wilson",
-      department: "Civil Engineering",
-      type: "Thesis",
-      date: "2024-01-08",
-      year: "2024",
-      downloads: 19,
-      description: "Comprehensive structural analysis methods for modern high-rise construction...",
-      keywords: ["structural engineering", "buildings", "analysis", "construction"],
-      fileSize: "2.0 MB",
-      pages: 110,
-    },
-    {
-      id: 5,
-      title: "Wireless Communication Protocols",
-      author: "Lisa Anderson",
-      department: "Electrical Engineering",
-      type: "Lab Report",
-      date: "2024-01-05",
-      year: "2024",
-      downloads: 15,
-      description: "Implementation and testing of various wireless communication protocols...",
-      keywords: ["wireless", "communication", "protocols", "networking"],
-      fileSize: "1.2 MB",
-      pages: 75,
-    },
-  ]
+  // Load user data and documents from API
+  useEffect(() => {
+    // Load user info from localStorage
+    const userInfo = localStorage.getItem('user_info')
+    const authToken = localStorage.getItem('auth_token')
+    
+    console.log('Browse page - User info:', userInfo)
+    console.log('Browse page - Auth token:', authToken ? 'Present' : 'Missing')
+    
+    if (userInfo) {
+      try {
+        const userData = JSON.parse(userInfo)
+        setUser(userData)
+        console.log('Browse page - User data:', userData)
+      } catch (error) {
+        console.error('Error parsing user info:', error)
+      }
+    }
+    
+    if (authToken) {
+      loadDocuments()
+    } else {
+      console.error('No auth token found - user not logged in')
+      setLoading(false)
+    }
+  }, [searchQuery, selectedType, selectedDepartment, selectedYear, selectedAuthor, selectedKeywords, sortBy, minDownloads, maxDownloads])
+
+  const loadDocuments = async () => {
+    setLoading(true)
+    setError(null)
+    try {
+      const params: any = {
+        search_query: searchQuery,
+        document_type: selectedType,
+        department: selectedDepartment,
+        year: selectedYear,
+        author: selectedAuthor,
+        sort_by: sortBy,
+      }
+
+      if (selectedKeywords.length > 0) {
+        params.keywords = selectedKeywords
+      }
+
+      if (minDownloads) {
+        params.min_downloads = parseInt(minDownloads)
+      }
+
+      if (maxDownloads) {
+        params.max_downloads = parseInt(maxDownloads)
+      }
+
+      console.log('Loading documents with params:', params)
+      const response = await apiClient.searchDocuments(params)
+      console.log('API response:', response)
+      
+      if (response.success && response.data) {
+        console.log('Documents data:', response.data)
+        
+        // Handle different response formats
+        let documentsData = []
+        let paginationData = {
+          current_page: 1,
+          last_page: 1,
+          per_page: 20,
+          total: 0,
+        }
+        
+        if (Array.isArray(response.data)) {
+          // Direct array response
+          documentsData = response.data
+        } else if (response.data.data && Array.isArray(response.data.data)) {
+          // Paginated response
+          documentsData = response.data.data
+          paginationData = response.data.pagination || paginationData
+        } else if (response.data.documents && Array.isArray(response.data.documents)) {
+          // Alternative format
+          documentsData = response.data.documents
+        }
+        
+        console.log('Processed documents data:', documentsData)
+        console.log('Pagination data:', paginationData)
+        
+        setDocuments(documentsData)
+        setPagination(paginationData)
+        
+        if (documentsData.length === 0) {
+          toast.info('No documents found matching your criteria')
+        }
+      } else {
+        console.log('No documents found or API error:', response)
+        setDocuments([])
+        setError('No documents found')
+      }
+    } catch (error) {
+      console.error('Error loading documents:', error)
+      setDocuments([])
+      setError('Failed to load documents. Please try again.')
+      toast.error('Failed to load documents')
+    } finally {
+      setLoading(false)
+    }
+  }
 
   const availableKeywords = Array.from(new Set(documents.flatMap((doc) => doc.keywords))).sort()
 
   const availableYears = Array.from(new Set(documents.map((doc) => doc.year)))
     .sort()
     .reverse()
-
-  const filteredDocuments = documents.filter((doc) => {
-    const matchesSearch =
-      doc.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      doc.author.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      doc.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      doc.keywords.some((keyword) => keyword.toLowerCase().includes(searchQuery.toLowerCase()))
-
-    const matchesType = selectedType === "all" || doc.type.toLowerCase().replace(" ", "-") === selectedType
-    const matchesDepartment =
-      selectedDepartment === "all" || doc.department.toLowerCase().replace(" ", "-") === selectedDepartment
-    const matchesYear = selectedYear === "all" || doc.year === selectedYear
-    const matchesAuthor = !selectedAuthor || doc.author.toLowerCase().includes(selectedAuthor.toLowerCase())
-    const matchesKeywords =
-      selectedKeywords.length === 0 || selectedKeywords.some((keyword) => doc.keywords.includes(keyword))
-
-    const matchesDownloadRange =
-      (!minDownloads || doc.downloads >= Number.parseInt(minDownloads)) &&
-      (!maxDownloads || doc.downloads <= Number.parseInt(maxDownloads))
-
-    return (
-      matchesSearch &&
-      matchesType &&
-      matchesDepartment &&
-      matchesYear &&
-      matchesAuthor &&
-      matchesKeywords &&
-      matchesDownloadRange
-    )
-  })
-
-  const sortedDocuments = [...filteredDocuments].sort((a, b) => {
-    switch (sortBy) {
-      case "date-desc":
-        return new Date(b.date).getTime() - new Date(a.date).getTime()
-      case "date-asc":
-        return new Date(a.date).getTime() - new Date(b.date).getTime()
-      case "downloads-desc":
-        return b.downloads - a.downloads
-      case "downloads-asc":
-        return a.downloads - b.downloads
-      case "title-asc":
-        return a.title.localeCompare(b.title)
-      case "title-desc":
-        return b.title.localeCompare(a.title)
-      case "author-asc":
-        return a.author.localeCompare(b.author)
-      default:
-        return 0
-    }
-  })
 
   const handleKeywordToggle = (keyword: string) => {
     setSelectedKeywords((prev) => (prev.includes(keyword) ? prev.filter((k) => k !== keyword) : [...prev, keyword]))
@@ -172,25 +188,35 @@ export default function BrowseArchive() {
     setMaxDownloads("")
   }
 
+  const handleViewDocument = async (documentId: number) => {
+    try {
+      await apiClient.previewDocument(documentId)
+      console.log('Document preview opened:', documentId)
+    } catch (error) {
+      console.error('Error previewing document:', error)
+      toast.error('Failed to preview document')
+    }
+  }
+
+  const handleDownloadDocument = async (documentId: number) => {
+    try {
+      await apiClient.downloadDocument(documentId)
+      console.log('Document download started:', documentId)
+      toast.success('Download started')
+    } catch (error) {
+      console.error('Error downloading document:', error)
+      toast.error('Failed to download document')
+    }
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center py-4">
-            <Link href="/student/dashboard">
-              <Button variant="ghost" size="sm" className="mr-4">
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Back to Dashboard
-              </Button>
-            </Link>
-            <div>
-              <h1 className="text-xl font-semibold text-gray-900">Browse Archive</h1>
-              <p className="text-sm text-gray-500">Search and explore AASTU document archive</p>
-            </div>
-          </div>
-        </div>
-      </header>
+      <PageHeader
+        title="Browse Archive"
+        subtitle="Search and explore AASTU document archive"
+        backUrl="/student/dashboard"
+        user={user}
+      />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Search and Filters */}
@@ -221,7 +247,7 @@ export default function BrowseArchive() {
                     onChange={(e) => setSearchQuery(e.target.value)}
                   />
                 </div>
-                <Button>
+                <Button onClick={loadDocuments}>
                   <Search className="h-4 w-4 mr-2" />
                   Search
                 </Button>
@@ -384,7 +410,7 @@ export default function BrowseArchive() {
         <div className="space-y-6">
           <div className="flex justify-between items-center">
             <h2 className="text-lg font-semibold text-gray-900">
-              {sortedDocuments.length} document{sortedDocuments.length !== 1 ? "s" : ""} found
+              {loading ? "Loading..." : `${pagination.total} document${pagination.total !== 1 ? "s" : ""} found`}
             </h2>
             <Select value={sortBy} onValueChange={setSortBy}>
               <SelectTrigger className="w-48">
@@ -402,66 +428,73 @@ export default function BrowseArchive() {
             </Select>
           </div>
 
-          <div className="grid gap-6">
-            {sortedDocuments.map((doc) => (
-              <Card key={doc.id} className="hover:shadow-md transition-shadow">
-                <CardContent className="p-6">
-                  <div className="flex justify-between items-start mb-4">
-                    <div className="flex-1">
-                      <h3 className="text-lg font-semibold text-gray-900 mb-2">{doc.title}</h3>
-                      <p className="text-gray-600 mb-3">{doc.description}</p>
+          {loading ? (
+            <div className="text-center py-12">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+              <p className="mt-4 text-gray-600">Loading documents...</p>
+            </div>
+          ) : (
+            <div className="grid gap-6">
+              {documents.map((doc) => (
+                <Card key={doc.id} className="hover:shadow-md transition-shadow">
+                  <CardContent className="p-6">
+                    <div className="flex justify-between items-start mb-4">
+                      <div className="flex-1">
+                        <h3 className="text-lg font-semibold text-gray-900 mb-2">{doc.title}</h3>
+                        <p className="text-gray-600 mb-3">{doc.description}</p>
 
-                      <div className="flex items-center space-x-4 text-sm text-gray-500 mb-3">
-                        <div className="flex items-center">
-                          <User className="h-4 w-4 mr-1" />
-                          {doc.author}
+                        <div className="flex items-center space-x-4 text-sm text-gray-500 mb-3">
+                          <div className="flex items-center">
+                            <User className="h-4 w-4 mr-1" />
+                            {doc.author}
+                          </div>
+                          <div className="flex items-center">
+                            <BookOpen className="h-4 w-4 mr-1" />
+                            {doc.department}
+                          </div>
+                          <div className="flex items-center">
+                            <Calendar className="h-4 w-4 mr-1" />
+                            {doc.date}
+                          </div>
+                          <div className="flex items-center">
+                            <Download className="h-4 w-4 mr-1" />
+                            {doc.downloads} downloads
+                          </div>
                         </div>
-                        <div className="flex items-center">
-                          <BookOpen className="h-4 w-4 mr-1" />
-                          {doc.department}
-                        </div>
-                        <div className="flex items-center">
-                          <Calendar className="h-4 w-4 mr-1" />
-                          {doc.date}
-                        </div>
-                        <div className="flex items-center">
-                          <Download className="h-4 w-4 mr-1" />
-                          {doc.downloads} downloads
+
+                        <div className="flex items-center space-x-2 mb-4">
+                          <Badge variant="secondary">{doc.type}</Badge>
+                          {doc.keywords.slice(0, 4).map((keyword, index) => (
+                            <Badge key={index} variant="outline" className="text-xs">
+                              {keyword}
+                            </Badge>
+                          ))}
+                          {doc.keywords.length > 4 && (
+                            <Badge variant="outline" className="text-xs">
+                              +{doc.keywords.length - 4} more
+                            </Badge>
+                          )}
                         </div>
                       </div>
 
-                      <div className="flex items-center space-x-2 mb-4">
-                        <Badge variant="secondary">{doc.type}</Badge>
-                        {doc.keywords.slice(0, 4).map((keyword, index) => (
-                          <Badge key={index} variant="outline" className="text-xs">
-                            {keyword}
-                          </Badge>
-                        ))}
-                        {doc.keywords.length > 4 && (
-                          <Badge variant="outline" className="text-xs">
-                            +{doc.keywords.length - 4} more
-                          </Badge>
-                        )}
+                      <div className="flex flex-col space-y-2 ml-6">
+                        <Button size="sm" onClick={() => handleViewDocument(doc.id)}>
+                          <Eye className="h-4 w-4 mr-2" />
+                          View
+                        </Button>
+                        <Button size="sm" variant="outline" onClick={() => handleDownloadDocument(doc.id)}>
+                          <Download className="h-4 w-4 mr-2" />
+                          Download
+                        </Button>
                       </div>
                     </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
 
-                    <div className="flex flex-col space-y-2 ml-6">
-                      <Button size="sm">
-                        <Eye className="h-4 w-4 mr-2" />
-                        View
-                      </Button>
-                      <Button size="sm" variant="outline">
-                        <Download className="h-4 w-4 mr-2" />
-                        Download
-                      </Button>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-
-          {sortedDocuments.length === 0 && (
+          {!loading && documents.length === 0 && (
             <Card>
               <CardContent className="p-12 text-center">
                 <Search className="h-12 w-12 text-gray-300 mx-auto mb-4" />
@@ -474,6 +507,9 @@ export default function BrowseArchive() {
           )}
         </div>
       </div>
+      
+      {/* Footer */}
+      <Footer />
     </div>
   )
 }

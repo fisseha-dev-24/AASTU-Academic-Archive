@@ -1,278 +1,389 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Calendar, ArrowLeft, Camera, Save, FileText, Award } from "lucide-react"
 import Link from "next/link"
+import { apiClient } from "@/lib/api"
+import PageHeader from "@/components/PageHeader"
+import Footer from "@/components/Footer"
+
+interface User {
+  id: number
+  name: string
+  email: string
+  role: string
+  department?: string
+  student_id?: string
+  department_id?: number
+}
+
+interface StudentProfile {
+  id: string
+  name: string
+  email: string
+  phone: string
+  department: string
+  college: string
+  year: string
+  gpa: string
+  joinDate: string
+  address: string
+  bio: string
+  interests: string[]
+}
+
+interface Activity {
+  id: number
+  action: string
+  document: string
+  date: string
+  status: string
+}
+
+interface Achievement {
+  id: number
+  title: string
+  description: string
+  date: string
+}
 
 export default function StudentProfile() {
+  const [user, setUser] = useState<User | null>(null)
   const [isEditing, setIsEditing] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
+  const [profileData, setProfileData] = useState<StudentProfile | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [editForm, setEditForm] = useState<Partial<StudentProfile>>({})
+
+  useEffect(() => {
+    // Load user info from localStorage
+    const userInfo = localStorage.getItem('user_info')
+    if (userInfo) {
+      try {
+        const userData = JSON.parse(userInfo)
+        setUser(userData)
+      } catch (error) {
+        console.error('Error parsing user info:', error)
+      }
+    }
+    
+    loadProfile()
+  }, [])
+
+  const loadProfile = async () => {
+    setLoading(true)
+    try {
+      const response = await apiClient.getStudentProfile()
+      
+      if (response.success && response.data) {
+        setProfileData(response.data)
+        setEditForm(response.data)
+      }
+    } catch (error) {
+      console.error('Error loading profile:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   const handleSave = async () => {
     setIsSaving(true)
-    // Simulate save operation
-    setTimeout(() => {
+    try {
+      const response = await apiClient.updateStudentProfile(editForm)
+      
+      if (response.success) {
+        setIsEditing(false)
+        loadProfile() // Reload profile data
+      }
+    } catch (error) {
+      console.error('Error updating profile:', error)
+    } finally {
       setIsSaving(false)
-      setIsEditing(false)
-    }, 1000)
+    }
   }
 
-  // Mock data - in real app this would come from API
-  const studentData = {
-    id: "AASTU/2021/001",
-    name: "John Doe",
-    email: "john.doe@aastu.edu.et",
-    phone: "+251-911-123456",
-    department: "Computer Science",
-    college: "College of Engineering",
-    year: "4th Year",
-    gpa: "3.85",
-    joinDate: "2021-09-15",
-    address: "Addis Ababa, Ethiopia",
-    bio: "Computer Science student passionate about machine learning and software development. Currently working on my final year project in AI applications.",
-    interests: ["Machine Learning", "Web Development", "Data Science", "Mobile Apps"],
+  const handleCancel = () => {
+    setIsEditing(false)
+    setEditForm(profileData || {})
   }
 
-  const recentActivity = [
-    { id: 1, action: "Submitted", document: "Final Year Project Proposal", date: "2024-01-20", status: "pending" },
-    {
-      id: 2,
-      action: "Downloaded",
-      document: "Machine Learning Research Paper",
-      date: "2024-01-18",
-      status: "completed",
-    },
-    { id: 3, action: "Viewed", document: "Database Systems Assignment", date: "2024-01-15", status: "completed" },
-  ]
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading profile...</p>
+        </div>
+      </div>
+    )
+  }
 
-  const achievements = [
-    { id: 1, title: "Dean's List", description: "Academic Excellence Award", date: "2023-12-15" },
-    { id: 2, title: "Best Project Award", description: "Software Engineering Course", date: "2023-11-20" },
-    { id: 3, title: "Research Publication", description: "Co-authored paper on AI applications", date: "2023-10-10" },
-  ]
+  if (!profileData) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-gray-600">Failed to load profile data</p>
+          <Button onClick={loadProfile} className="mt-4">Retry</Button>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <header className="bg-white border-b border-gray-200">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between py-4">
-            <div className="flex items-center">
-              <Link href="/student/dashboard">
-                <Button variant="ghost" size="sm" className="mr-4">
-                  <ArrowLeft className="h-4 w-4 mr-2" />
-                  Back to Dashboard
-                </Button>
-              </Link>
-              <div>
-                <h1 className="text-xl font-semibold text-gray-900">My Profile</h1>
-                <p className="text-sm text-gray-500">Manage your account information</p>
-              </div>
-            </div>
-            <div className="flex space-x-2">
-              {isEditing ? (
-                <>
-                  <Button variant="outline" onClick={() => setIsEditing(false)}>
-                    Cancel
-                  </Button>
-                  <Button onClick={handleSave} disabled={isSaving}>
-                    <Save className="h-4 w-4 mr-2" />
-                    {isSaving ? "Saving..." : "Save Changes"}
-                  </Button>
-                </>
-              ) : (
-                <Button onClick={() => setIsEditing(true)}>Edit Profile</Button>
-              )}
-            </div>
-          </div>
-        </div>
-      </header>
+      <PageHeader
+        title="Student Profile"
+        subtitle="Manage your academic profile"
+        backUrl="/student/dashboard"
+        user={user}
+      />
 
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <Tabs defaultValue="profile" className="space-y-6">
-          <TabsList>
-            <TabsTrigger value="profile">Profile Information</TabsTrigger>
-            <TabsTrigger value="activity">Recent Activity</TabsTrigger>
-            <TabsTrigger value="achievements">Achievements</TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="profile" className="space-y-6">
-            {/* Profile Header */}
-            <Card>
-              <CardContent className="p-6">
-                <div className="flex items-center space-x-6">
-                  <div className="relative">
-                    <Avatar className="h-24 w-24">
-                      <AvatarImage src="/placeholder.svg?height=96&width=96" />
-                      <AvatarFallback className="text-lg">JD</AvatarFallback>
-                    </Avatar>
-                    {isEditing && (
-                      <Button size="sm" className="absolute -bottom-2 -right-2 h-8 w-8 rounded-full p-0">
-                        <Camera className="h-4 w-4" />
-                      </Button>
-                    )}
-                  </div>
-                  <div className="flex-1">
-                    <h2 className="text-2xl font-bold text-gray-900">{studentData.name}</h2>
-                    <p className="text-gray-600">{studentData.id}</p>
-                    <div className="flex items-center space-x-4 mt-2">
-                      <Badge variant="secondary">{studentData.year}</Badge>
-                      <Badge variant="outline">{studentData.department}</Badge>
-                      <Badge variant="outline">GPA: {studentData.gpa}</Badge>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Personal Information */}
+        {/* Edit Profile Buttons */}
+        <div className="flex justify-end mb-6">
+          {isEditing ? (
+            <div className="flex space-x-2">
+              <Button variant="outline" onClick={handleCancel}>
+                Cancel
+              </Button>
+              <Button onClick={handleSave} disabled={isSaving}>
+                <Save className="h-4 w-4 mr-2" />
+                {isSaving ? "Saving..." : "Save Changes"}
+              </Button>
+            </div>
+          ) : (
+            <Button onClick={() => setIsEditing(true)}>Edit Profile</Button>
+          )}
+        </div>
+        
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Profile Information */}
+          <div className="lg:col-span-2">
             <Card>
               <CardHeader>
                 <CardTitle>Personal Information</CardTitle>
-                <CardDescription>Your basic profile information</CardDescription>
+                <CardDescription>Update your personal details and academic information</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-2">
-                    <Label htmlFor="name">Full Name</Label>
-                    <Input id="name" defaultValue={studentData.name} disabled={!isEditing} />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="student-id">Student ID</Label>
-                    <Input id="student-id" defaultValue={studentData.id} disabled />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-2">
-                    <Label htmlFor="email">Email Address</Label>
-                    <Input id="email" type="email" defaultValue={studentData.email} disabled={!isEditing} />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="phone">Phone Number</Label>
-                    <Input id="phone" defaultValue={studentData.phone} disabled={!isEditing} />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-2">
-                    <Label htmlFor="department">Department</Label>
-                    <Select disabled={!isEditing} defaultValue="computer-science">
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="computer-science">Computer Science</SelectItem>
-                        <SelectItem value="electrical-engineering">Electrical Engineering</SelectItem>
-                        <SelectItem value="civil-engineering">Civil Engineering</SelectItem>
-                        <SelectItem value="mechanical-engineering">Mechanical Engineering</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="college">College</Label>
-                    <Input id="college" defaultValue={studentData.college} disabled />
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="address">Address</Label>
-                  <Input id="address" defaultValue={studentData.address} disabled={!isEditing} />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="bio">Bio</Label>
-                  <Textarea id="bio" defaultValue={studentData.bio} disabled={!isEditing} rows={4} />
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Interests</Label>
-                  <div className="flex flex-wrap gap-2">
-                    {studentData.interests.map((interest, index) => (
-                      <Badge key={index} variant="outline">
-                        {interest}
-                      </Badge>
-                    ))}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="activity" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Recent Activity</CardTitle>
-                <CardDescription>Your recent actions in the archive system</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {recentActivity.map((activity) => (
-                    <div key={activity.id} className="flex items-center justify-between p-4 border rounded-lg">
-                      <div className="flex items-center space-x-4">
-                        <div className="p-2 bg-blue-100 rounded-full">
-                          <FileText className="h-4 w-4 text-blue-600" />
-                        </div>
-                        <div>
-                          <p className="font-medium text-gray-900">
-                            {activity.action} "{activity.document}"
-                          </p>
-                          <p className="text-sm text-gray-500">{activity.date}</p>
-                        </div>
-                      </div>
-                      <Badge
-                        className={
-                          activity.status === "completed"
-                            ? "bg-green-100 text-green-800"
-                            : "bg-yellow-100 text-yellow-800"
-                        }
+                {/* Profile Picture */}
+                <div className="flex items-center space-x-4">
+                  <div className="relative">
+                    <div className="h-20 w-20 rounded-full bg-gray-200 flex items-center justify-center">
+                      <Camera className="h-8 w-8 text-gray-400" />
+                    </div>
+                    {isEditing && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="absolute -bottom-1 -right-1 h-6 w-6 rounded-full p-0"
                       >
-                        {activity.status === "completed" ? "Completed" : "Pending"}
-                      </Badge>
+                        <Camera className="h-3 w-3" />
+                      </Button>
+                    )}
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-medium">{profileData.name}</h3>
+                    <p className="text-sm text-gray-500">{profileData.email}</p>
+                  </div>
+                </div>
+
+                {/* Form Fields */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="name">Full Name</Label>
+                    {isEditing ? (
+                      <Input
+                        id="name"
+                        value={editForm.name || ''}
+                        onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                      />
+                    ) : (
+                      <p className="text-sm text-gray-900 mt-1">{profileData.name}</p>
+                    )}
+                  </div>
+
+                  <div>
+                    <Label htmlFor="email">Email</Label>
+                    <p className="text-sm text-gray-900 mt-1">{profileData.email}</p>
+                  </div>
+
+                  <div>
+                    <Label htmlFor="phone">Phone Number</Label>
+                    {isEditing ? (
+                      <Input
+                        id="phone"
+                        value={editForm.phone || ''}
+                        onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
+                      />
+                    ) : (
+                      <p className="text-sm text-gray-900 mt-1">{profileData.phone}</p>
+                    )}
+                  </div>
+
+                  <div>
+                    <Label htmlFor="studentId">Student ID</Label>
+                    <p className="text-sm text-gray-900 mt-1">{profileData.id}</p>
+                  </div>
+
+                  <div>
+                    <Label htmlFor="department">Department</Label>
+                    <p className="text-sm text-gray-900 mt-1">{profileData.department}</p>
+                  </div>
+
+                  <div>
+                    <Label htmlFor="college">College</Label>
+                    <p className="text-sm text-gray-900 mt-1">{profileData.college}</p>
+                  </div>
+
+                  <div>
+                    <Label htmlFor="year">Academic Year</Label>
+                    <p className="text-sm text-gray-900 mt-1">{profileData.year}</p>
+                  </div>
+
+                  <div>
+                    <Label htmlFor="gpa">GPA</Label>
+                    <p className="text-sm text-gray-900 mt-1">{profileData.gpa}</p>
+                  </div>
+
+                  <div className="md:col-span-2">
+                    <Label htmlFor="address">Address</Label>
+                    {isEditing ? (
+                      <Input
+                        id="address"
+                        value={editForm.address || ''}
+                        onChange={(e) => setEditForm({ ...editForm, address: e.target.value })}
+                      />
+                    ) : (
+                      <p className="text-sm text-gray-900 mt-1">{profileData.address}</p>
+                    )}
+                  </div>
+
+                  <div className="md:col-span-2">
+                    <Label htmlFor="bio">Bio</Label>
+                    {isEditing ? (
+                      <Textarea
+                        id="bio"
+                        value={editForm.bio || ''}
+                        onChange={(e) => setEditForm({ ...editForm, bio: e.target.value })}
+                        rows={3}
+                      />
+                    ) : (
+                      <p className="text-sm text-gray-900 mt-1">{profileData.bio}</p>
+                    )}
+                  </div>
+
+                  <div className="md:col-span-2">
+                    <Label>Academic Interests</Label>
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      {profileData.interests.map((interest, index) => (
+                        <Badge key={index} variant="secondary">
+                          {interest}
+                        </Badge>
+                      ))}
                     </div>
-                  ))}
+                  </div>
                 </div>
               </CardContent>
             </Card>
-          </TabsContent>
+          </div>
 
-          <TabsContent value="achievements" className="space-y-6">
+          {/* Sidebar */}
+          <div className="space-y-6">
+            {/* Quick Stats */}
             <Card>
               <CardHeader>
-                <CardTitle>Achievements & Awards</CardTitle>
-                <CardDescription>Your academic achievements and recognitions</CardDescription>
+                <CardTitle>Academic Stats</CardTitle>
               </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {achievements.map((achievement) => (
-                    <div key={achievement.id} className="flex items-center space-x-4 p-4 border rounded-lg">
-                      <div className="p-2 bg-yellow-100 rounded-full">
-                        <Award className="h-5 w-5 text-yellow-600" />
-                      </div>
-                      <div className="flex-1">
-                        <h4 className="font-medium text-gray-900">{achievement.title}</h4>
-                        <p className="text-sm text-gray-600">{achievement.description}</p>
-                        <p className="text-sm text-gray-500 flex items-center mt-1">
-                          <Calendar className="h-3 w-3 mr-1" />
-                          {achievement.date}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
+              <CardContent className="space-y-4">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-gray-600">Join Date</span>
+                  <span className="text-sm font-medium">{profileData.joinDate}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-gray-600">Current GPA</span>
+                  <span className="text-sm font-medium">{profileData.gpa}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-gray-600">Academic Year</span>
+                  <span className="text-sm font-medium">{profileData.year}</span>
                 </div>
               </CardContent>
             </Card>
-          </TabsContent>
-        </Tabs>
+
+            {/* Recent Activity */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center">
+                  <FileText className="h-5 w-5 mr-2" />
+                  Recent Activity
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1">
+                      <p className="text-sm font-medium">Submitted Final Year Project Proposal</p>
+                      <p className="text-xs text-gray-500">2024-01-20</p>
+                    </div>
+                    <Badge variant="outline" className="text-xs">Pending</Badge>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1">
+                      <p className="text-sm font-medium">Downloaded Machine Learning Research Paper</p>
+                      <p className="text-xs text-gray-500">2024-01-18</p>
+                    </div>
+                    <Badge variant="outline" className="text-xs">Completed</Badge>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1">
+                      <p className="text-sm font-medium">Viewed Database Systems Assignment</p>
+                      <p className="text-xs text-gray-500">2024-01-15</p>
+                    </div>
+                    <Badge variant="outline" className="text-xs">Completed</Badge>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Achievements */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center">
+                  <Award className="h-5 w-5 mr-2" />
+                  Achievements
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                    <h4 className="font-medium text-yellow-800">Dean's List</h4>
+                    <p className="text-sm text-yellow-700">Academic Excellence Award</p>
+                    <p className="text-xs text-yellow-600 mt-1">2023-12-15</p>
+                  </div>
+                  <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                    <h4 className="font-medium text-blue-800">Best Project Award</h4>
+                    <p className="text-sm text-blue-700">Software Engineering Course</p>
+                    <p className="text-xs text-blue-600 mt-1">2023-11-20</p>
+                  </div>
+                  <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                    <h4 className="font-medium text-green-800">Research Publication</h4>
+                    <p className="text-sm text-green-700">Co-authored paper on AI applications</p>
+                    <p className="text-xs text-green-600 mt-1">2023-10-10</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
       </div>
     </div>
   )

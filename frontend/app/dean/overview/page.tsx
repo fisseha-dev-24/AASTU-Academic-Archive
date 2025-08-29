@@ -1,10 +1,9 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
   Users,
   FileText,
@@ -17,9 +16,24 @@ import {
   ArrowLeft,
 } from "lucide-react"
 import Link from "next/link"
+import PageHeader from "@/components/PageHeader"
 
 export default function CollegeOverview() {
   const [selectedDepartment, setSelectedDepartment] = useState<string | null>(null)
+  const [user, setUser] = useState<any>(null)
+
+  useEffect(() => {
+    // Load user info from localStorage
+    const userInfo = localStorage.getItem('user_info')
+    if (userInfo) {
+      try {
+        const userData = JSON.parse(userInfo)
+        setUser(userData)
+      } catch (error) {
+        console.error('Error parsing user info:', error)
+      }
+    }
+  }, [])
 
   // Mock data for college-level overview
   const collegeStats = {
@@ -107,35 +121,12 @@ export default function CollegeOverview() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <header className="bg-white border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-6">
-            <div className="flex items-center">
-              <Link href="/dean/dashboard">
-                <Button variant="ghost" size="sm" className="mr-4">
-                  <ArrowLeft className="h-4 w-4 mr-2" />
-                  Back to Dashboard
-                </Button>
-              </Link>
-              <img src="/aastu-university-logo-blue-and-green.png" alt="AASTU Logo" className="h-12 w-12 mr-4" />
-              <div>
-                <h1 className="text-2xl font-bold text-gray-900">College Overview</h1>
-                <p className="text-sm text-gray-600">Department Performance & Analytics</p>
-              </div>
-            </div>
-            <div className="flex items-center space-x-4">
-              <Button variant="outline" size="sm">
-                <Download className="h-4 w-4 mr-2" />
-                Export Report
-              </Button>
-              <Avatar>
-                <AvatarImage src="/placeholder.svg?height=40&width=40" />
-                <AvatarFallback>CD</AvatarFallback>
-              </Avatar>
-            </div>
-          </div>
-        </div>
-      </header>
+      <PageHeader
+        title="College Overview"
+        subtitle="College statistics and activity"
+        backUrl="/dean/dashboard"
+        user={user}
+      />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* College Statistics Cards */}
@@ -193,7 +184,7 @@ export default function CollegeOverview() {
         <Card className="mb-8">
           <CardHeader>
             <CardTitle className="flex items-center">
-              <Target className="h-5 w-5 text-blue-600 mr-2" />
+              <Target className="h-5 w-5 text-blue-600 " />
               Department Performance Overview
             </CardTitle>
             <CardDescription>Real-time performance metrics across all departments</CardDescription>
@@ -203,11 +194,6 @@ export default function CollegeOverview() {
               {departments.map((dept) => (
                 <div key={dept.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
                   <div className="flex items-center space-x-4">
-                    <div className="flex-shrink-0">
-                      <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                        <Building2 className="h-6 w-6 text-blue-600" />
-                      </div>
-                    </div>
                     <div>
                       <h3 className="font-semibold text-gray-900">{dept.name}</h3>
                       <p className="text-sm text-gray-600">Head: {dept.head}</p>
@@ -241,7 +227,7 @@ export default function CollegeOverview() {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center">
-                <BarChart3 className="h-5 w-5 text-blue-600 mr-2" />
+                <BarChart3 className="h-5 w-5 text-blue-600 " />
                 Monthly Trends
               </CardTitle>
             </CardHeader>
@@ -255,7 +241,7 @@ export default function CollegeOverview() {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center">
-                <PieChart className="h-5 w-5 text-emerald-600 mr-2" />
+                <PieChart className="h-5 w-5 text-emerald-600 " />
                 Department Distribution
               </CardTitle>
             </CardHeader>

@@ -1,16 +1,40 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Input } from "@/components/ui/input"
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
 import { Users, Mail, Award, FileText, Search, Download, ArrowLeft, Phone, Calendar, BookOpen } from "lucide-react"
 import Link from "next/link"
+import PageHeader from "@/components/PageHeader"
+import Footer from "@/components/Footer"
 
 export default function DepartmentTeachers() {
   const [searchTerm, setSearchTerm] = useState("")
+  const [user, setUser] = useState<{
+    id: number
+    name: string
+    email: string
+    role: string
+    department?: string
+    student_id?: string
+    department_id?: number
+  } | null>(null)
+
+  // Load user data
+  useEffect(() => {
+    const userInfo = localStorage.getItem('user_info')
+    if (userInfo) {
+      try {
+        const userData = JSON.parse(userInfo)
+        setUser(userData)
+      } catch (error) {
+        console.error('Error parsing user info:', error)
+      }
+    }
+  }, [])
 
   const teachers = [
     {
@@ -78,39 +102,12 @@ export default function DepartmentTeachers() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <header className="bg-white border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-6">
-            <div className="flex items-center">
-              <Link href="/department/dashboard">
-                <Button variant="ghost" size="sm" className="mr-4">
-                  <ArrowLeft className="h-4 w-4 mr-2" />
-                  Back to Dashboard
-                </Button>
-              </Link>
-              <img src="/aastu-university-logo-blue-and-green.png" alt="AASTU Logo" className="h-12 w-12 mr-4" />
-              <div>
-                <h1 className="text-2xl font-bold text-gray-900">Department Teachers</h1>
-                <p className="text-sm text-gray-600">Manage faculty and their documents</p>
-              </div>
-            </div>
-            <div className="flex items-center space-x-4">
-              <Button className="bg-blue-600 hover:bg-blue-700">
-                <Users className="h-4 w-4 mr-2" />
-                Add New Teacher
-              </Button>
-              <Button variant="outline" size="sm">
-                <Download className="h-4 w-4 mr-2" />
-                Export Report
-              </Button>
-              <Avatar>
-                <AvatarImage src="/placeholder.svg?height=40&width=40" />
-                <AvatarFallback>DH</AvatarFallback>
-              </Avatar>
-            </div>
-          </div>
-        </div>
-      </header>
+      <PageHeader
+        title="Faculty Management"
+        subtitle="Manage department teachers"
+        backUrl="/department/dashboard"
+        user={user}
+      />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Search */}
@@ -157,29 +154,29 @@ export default function DepartmentTeachers() {
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-gray-600">
                         <div className="space-y-2">
                           <div className="flex items-center">
-                            <Mail className="h-4 w-4 mr-2" />
+                            <Mail className="h-4 w-4 " />
                             {teacher.email}
                           </div>
                           <div className="flex items-center">
-                            <Phone className="h-4 w-4 mr-2" />
+                            <Phone className="h-4 w-4 " />
                             {teacher.phone}
                           </div>
                           <div className="flex items-center">
-                            <Award className="h-4 w-4 mr-2" />
+                            <Award className="h-4 w-4 " />
                             {teacher.specialization}
                           </div>
                         </div>
                         <div className="space-y-2">
                           <div className="flex items-center">
-                            <Calendar className="h-4 w-4 mr-2" />
+                            <Calendar className="h-4 w-4 " />
                             Joined: {teacher.joinDate}
                           </div>
                           <div className="flex items-center">
-                            <FileText className="h-4 w-4 mr-2" />
+                            <FileText className="h-4 w-4 " />
                             {teacher.documentsUploaded} documents uploaded
                           </div>
                           <div className="flex items-center">
-                            <BookOpen className="h-4 w-4 mr-2" />
+                            <BookOpen className="h-4 w-4 " />
                             {teacher.courses.length} courses
                           </div>
                         </div>
@@ -249,6 +246,8 @@ export default function DepartmentTeachers() {
           </Card>
         </div>
       </div>
+      
+      <Footer />
     </div>
   )
 }

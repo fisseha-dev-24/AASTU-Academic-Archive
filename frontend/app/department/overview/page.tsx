@@ -1,8 +1,9 @@
 "use client"
 
+import { useState, useEffect } from "react"
+import Link from "next/link"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
   Users,
   FileText,
@@ -11,13 +12,36 @@ import {
   BookOpen,
   Activity,
   Download,
-  ArrowLeft,
   TrendingUp,
   XCircle,
 } from "lucide-react"
-import Link from "next/link"
+import PageHeader from "@/components/PageHeader"
+import Footer from "@/components/Footer"
 
 export default function DepartmentOverview() {
+  const [user, setUser] = useState<{
+    id: number
+    name: string
+    email: string
+    role: string
+    department?: string
+    student_id?: string
+    department_id?: number
+  } | null>(null)
+
+  // Load user data
+  useEffect(() => {
+    const userInfo = localStorage.getItem('user_info')
+    if (userInfo) {
+      try {
+        const userData = JSON.parse(userInfo)
+        setUser(userData)
+      } catch (error) {
+        console.error('Error parsing user info:', error)
+      }
+    }
+  }, [])
+
   const departmentStats = {
     totalTeachers: 24,
     totalDocuments: 1247,
@@ -29,36 +53,17 @@ export default function DepartmentOverview() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-6">
-            <div className="flex items-center">
-              <Link href="/department/dashboard">
-                <Button variant="ghost" size="sm" className="mr-4">
-                  <ArrowLeft className="h-4 w-4 mr-2" />
-                  Back to Dashboard
-                </Button>
-              </Link>
-              <img src="/aastu-university-logo-blue-and-green.png" alt="AASTU Logo" className="h-12 w-12 mr-4" />
-              <div>
-                <h1 className="text-2xl font-bold text-gray-900">Department Overview</h1>
-                <p className="text-sm text-gray-600">Computer Science Department</p>
-              </div>
-            </div>
-            <div className="flex items-center space-x-4">
-              <Button variant="outline" size="sm">
-                <Download className="h-4 w-4 mr-2" />
-                Export Report
-              </Button>
-              <Avatar>
-                <AvatarImage src="/placeholder.svg?height=40&width=40" />
-                <AvatarFallback>DH</AvatarFallback>
-              </Avatar>
-            </div>
-          </div>
-        </div>
-      </header>
+      <PageHeader
+        title="Department Overview"
+        subtitle="Department statistics and activity"
+        backUrl="/department/dashboard"
+        user={user}
+      >
+        <Button variant="outline" size="sm">
+          <Download className="h-4 w-4 mr-2" />
+          Export Report
+        </Button>
+      </PageHeader>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Statistics Cards */}
@@ -118,7 +123,7 @@ export default function DepartmentOverview() {
             <Card className="hover:shadow-md transition-shadow cursor-pointer">
               <CardHeader>
                 <CardTitle className="flex items-center">
-                  <CheckCircle className="h-5 w-5 text-green-600 mr-2" />
+                  <CheckCircle className="h-5 w-5 text-green-600 " />
                   Quick Approvals
                 </CardTitle>
                 <CardDescription>Review and approve pending documents</CardDescription>
@@ -135,7 +140,7 @@ export default function DepartmentOverview() {
             <Card className="hover:shadow-md transition-shadow cursor-pointer">
               <CardHeader>
                 <CardTitle className="flex items-center">
-                  <Users className="h-5 w-5 text-blue-600 mr-2" />
+                  <Users className="h-5 w-5 text-blue-600 " />
                   Manage Faculty
                 </CardTitle>
                 <CardDescription>View and manage department teachers</CardDescription>
@@ -152,7 +157,7 @@ export default function DepartmentOverview() {
             <Card className="hover:shadow-md transition-shadow cursor-pointer">
               <CardHeader>
                 <CardTitle className="flex items-center">
-                  <TrendingUp className="h-5 w-5 text-purple-600 mr-2" />
+                  <TrendingUp className="h-5 w-5 text-purple-600 " />
                   Generate Reports
                 </CardTitle>
                 <CardDescription>Create department performance reports</CardDescription>
@@ -168,7 +173,7 @@ export default function DepartmentOverview() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center">
-              <Activity className="h-5 w-5 text-blue-600 mr-2" />
+              <Activity className="h-5 w-5 text-blue-600 " />
               Recent Activity
             </CardTitle>
           </CardHeader>
@@ -218,6 +223,9 @@ export default function DepartmentOverview() {
           </CardContent>
         </Card>
       </div>
+      
+      {/* Footer */}
+      <Footer />
     </div>
   )
 }

@@ -8,7 +8,7 @@ class DocumentReview extends Model
 {
     protected $fillable = [
         'document_id',
-        'user_id',
+        'reviewer_id',
         'status',
         'comments'
     ];
@@ -22,6 +22,6 @@ class DocumentReview extends Model
     // Review belongs to a reviewer
     public function reviewer()
     {
-        return $this->belongsTo(User::class, 'user_id');
+        return $this->belongsTo(User::class, 'reviewer_id');
     }
 }

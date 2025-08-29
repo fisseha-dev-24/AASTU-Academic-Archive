@@ -99,14 +99,6 @@ export default function TeacherManage() {
       <div className="bg-white border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
-            <div className="flex items-center space-x-4">
-              <Link href="/teacher/dashboard" className="flex items-center text-gray-600 hover:text-gray-900">
-                <ArrowLeft className="h-5 w-5 mr-2" />
-                Back to Dashboard
-              </Link>
-              <div className="h-6 border-l border-gray-300" />
-              <h1 className="text-xl font-semibold text-gray-900">Manage Courses</h1>
-            </div>
           </div>
         </div>
       </div>
@@ -124,7 +116,7 @@ export default function TeacherManage() {
             <div className="flex justify-between items-center">
               <h2 className="text-2xl font-bold text-gray-900">Course Management</h2>
               <Button className="bg-blue-600 hover:bg-blue-700">
-                <Plus className="h-4 w-4 mr-2" />
+                <Plus className="h-4 w-4 " />
                 Add Course
               </Button>
             </div>

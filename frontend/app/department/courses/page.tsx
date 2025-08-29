@@ -1,16 +1,39 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Input } from "@/components/ui/input"
 import { BookOpen, Users, FileText, Search, Download, ArrowLeft, Calendar, Clock, Award } from "lucide-react"
 import Link from "next/link"
+import PageHeader from "@/components/PageHeader"
+import Footer from "@/components/Footer"
 
 export default function CourseManagement() {
   const [searchTerm, setSearchTerm] = useState("")
+  const [user, setUser] = useState<{
+    id: number
+    name: string
+    email: string
+    role: string
+    department?: string
+    student_id?: string
+    department_id?: number
+  } | null>(null)
+
+  // Load user data
+  useEffect(() => {
+    const userInfo = localStorage.getItem('user_info')
+    if (userInfo) {
+      try {
+        const userData = JSON.parse(userInfo)
+        setUser(userData)
+      } catch (error) {
+        console.error('Error parsing user info:', error)
+      }
+    }
+  }, [])
 
   const courses = [
     {
@@ -91,39 +114,12 @@ export default function CourseManagement() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <header className="bg-white border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-6">
-            <div className="flex items-center">
-              <Link href="/department/dashboard">
-                <Button variant="ghost" size="sm" className="mr-4">
-                  <ArrowLeft className="h-4 w-4 mr-2" />
-                  Back to Dashboard
-                </Button>
-              </Link>
-              <img src="/aastu-university-logo-blue-and-green.png" alt="AASTU Logo" className="h-12 w-12 mr-4" />
-              <div>
-                <h1 className="text-2xl font-bold text-gray-900">Course Management</h1>
-                <p className="text-sm text-gray-600">Manage courses and academic programs</p>
-              </div>
-            </div>
-            <div className="flex items-center space-x-4">
-              <Button className="bg-emerald-600 hover:bg-emerald-700">
-                <BookOpen className="h-4 w-4 mr-2" />
-                Add New Course
-              </Button>
-              <Button variant="outline" size="sm">
-                <Download className="h-4 w-4 mr-2" />
-                Export Report
-              </Button>
-              <Avatar>
-                <AvatarImage src="/placeholder.svg?height=40&width=40" />
-                <AvatarFallback>DH</AvatarFallback>
-              </Avatar>
-            </div>
-          </div>
-        </div>
-      </header>
+      <PageHeader
+        title="Course Management"
+        subtitle="Manage department courses"
+        backUrl="/department/dashboard"
+        user={user}
+      />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Search */}
@@ -238,6 +234,8 @@ export default function CourseManagement() {
           </Card>
         </div>
       </div>
+      
+      <Footer />
     </div>
   )
 }

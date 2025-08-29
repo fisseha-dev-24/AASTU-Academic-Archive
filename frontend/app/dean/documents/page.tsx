@@ -1,10 +1,9 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import {
@@ -13,209 +12,175 @@ import {
   Download,
   Eye,
   Calendar,
+  User,
   Building2,
-  ChevronRight,
-  ChevronDown,
-  UserCheck,
-  FileCheck,
-  ArrowLeft,
+  CheckCircle,
+  Clock,
 } from "lucide-react"
-import Link from "next/link"
+import PageHeader from "@/components/PageHeader"
+import Footer from "@/components/Footer"
 
-export default function DocumentsTree() {
+interface User {
+  id: number
+  name: string
+  email: string
+  role: string
+  department?: string
+}
+
+interface Document {
+  id: number
+  title: string
+  author: string
+  department: string
+  type: string
+  year: string
+  uploadDate: string
+  downloads: number
+  views: number
+  status: string
+}
+
+export default function DeanDocuments() {
+  const [user, setUser] = useState<User | null>(null)
   const [searchTerm, setSearchTerm] = useState("")
   const [filterStatus, setFilterStatus] = useState("all")
-  const [expandedDepartments, setExpandedDepartments] = useState<string[]>([])
-  const [expandedYears, setExpandedYears] = useState<string[]>([])
+  const [filterDepartment, setFilterDepartment] = useState("all")
+  const [documents, setDocuments] = useState<Document[]>([])
 
-  // Document tree structure by department and year
-  const documentTree = [
-    {
-      department: "Computer Science",
-      code: "CS",
-      totalDocs: 1247,
-      years: [
-        {
-          year: 2024,
-          documents: [
-            {
-              id: 1,
-              title: "Advanced Database Systems - Course Materials",
-              teacher: "Dr. Sarah Johnson",
-              type: "Course Material",
-              approvedDate: "2024-01-15",
-              downloads: 245,
-              tags: ["database", "sql", "nosql"],
-            },
-            {
-              id: 2,
-              title: "Machine Learning Research Paper",
-              teacher: "Prof. Michael Chen",
-              type: "Research Paper",
-              approvedDate: "2024-01-14",
-              downloads: 189,
-              tags: ["ml", "ai", "research"],
-            },
-            {
-              id: 3,
-              title: "Data Structures and Algorithms Lab Manual",
-              teacher: "Dr. Sarah Johnson",
-              type: "Lab Manual",
-              approvedDate: "2024-01-10",
-              downloads: 567,
-              tags: ["algorithms", "data-structures", "lab"],
-            },
-          ],
-        },
-        {
-          year: 2023,
-          documents: [
-            {
-              id: 4,
-              title: "Software Engineering Lab Manual",
-              teacher: "Dr. Emily Davis",
-              type: "Lab Manual",
-              approvedDate: "2023-12-20",
-              downloads: 567,
-              tags: ["software-engineering", "lab", "project"],
-            },
-            {
-              id: 5,
-              title: "Computer Networks Final Exam",
-              teacher: "Prof. Michael Chen",
-              type: "Exam Paper",
-              approvedDate: "2023-12-15",
-              downloads: 234,
-              tags: ["networks", "exam", "final"],
-            },
-          ],
-        },
-      ],
-    },
-    {
-      department: "Electrical Engineering",
-      code: "EE",
-      totalDocs: 1456,
-      years: [
-        {
-          year: 2024,
-          documents: [
-            {
-              id: 6,
-              title: "Circuit Analysis Fundamentals",
-              teacher: "Prof. Ahmed Hassan",
-              type: "Course Material",
-              approvedDate: "2024-01-12",
-              downloads: 345,
-              tags: ["circuits", "analysis", "fundamentals"],
-            },
-            {
-              id: 7,
-              title: "Power Systems Lab Manual",
-              teacher: "Dr. Lisa Wang",
-              type: "Lab Manual",
-              approvedDate: "2024-01-08",
-              downloads: 278,
-              tags: ["power-systems", "lab", "electrical"],
-            },
-          ],
-        },
-      ],
-    },
-    {
-      department: "Mechanical Engineering",
-      code: "ME",
-      totalDocs: 1789,
-      years: [
-        {
-          year: 2024,
-          documents: [
-            {
-              id: 8,
-              title: "Thermodynamics Course Materials",
-              teacher: "Dr. Emily Davis",
-              type: "Course Material",
-              approvedDate: "2024-01-16",
-              downloads: 456,
-              tags: ["thermodynamics", "heat", "energy"],
-            },
-          ],
-        },
-      ],
-    },
-  ]
+  useEffect(() => {
+    // Load user info from localStorage
+    const userInfo = localStorage.getItem('user_info')
+    if (userInfo) {
+      try {
+        const userData = JSON.parse(userInfo)
+        setUser(userData)
+      } catch (error) {
+        console.error('Error parsing user info:', error)
+      }
+    }
 
-  const toggleDepartment = (deptName: string) => {
-    setExpandedDepartments((prev) =>
-      prev.includes(deptName) ? prev.filter((name) => name !== deptName) : [...prev, deptName],
-    )
-  }
+    // Mock data for documents
+    const mockDocuments: Document[] = [
+      {
+        id: 1,
+        title: "Advanced Database Systems - Course Materials",
+        author: "Dr. Sarah Johnson",
+        department: "Computer Science",
+        type: "Course Material",
+        year: "2024",
+        uploadDate: "2024-01-15",
+        downloads: 245,
+        views: 567,
+        status: "approved"
+      },
+      {
+        id: 2,
+        title: "Machine Learning Research Paper",
+        author: "Prof. Michael Chen",
+        department: "Computer Science",
+        type: "Research Paper",
+        year: "2024",
+        uploadDate: "2024-01-14",
+        downloads: 189,
+        views: 423,
+        status: "approved"
+      },
+      {
+        id: 3,
+        title: "Circuit Design Manual",
+        author: "Dr. Emily Davis",
+        department: "Electrical Engineering",
+        type: "Lab Manual",
+        year: "2024",
+        uploadDate: "2024-01-13",
+        downloads: 156,
+        views: 298,
+        status: "pending"
+      },
+      {
+        id: 4,
+        title: "Software Architecture Principles",
+        author: "Prof. Ahmed Hassan",
+        department: "Software Engineering",
+        type: "Course Material",
+        year: "2024",
+        uploadDate: "2024-01-12",
+        downloads: 203,
+        views: 445,
+        status: "approved"
+      },
+      {
+        id: 5,
+        title: "Mechanical Design Project Guidelines",
+        author: "Dr. Lisa Wang",
+        department: "Mechanical Engineering",
+        type: "Project Guidelines",
+        year: "2024",
+        uploadDate: "2024-01-11",
+        downloads: 178,
+        views: 312,
+        status: "pending"
+      }
+    ]
 
-  const toggleYear = (key: string) => {
-    setExpandedYears((prev) => (prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]))
-  }
+    setDocuments(mockDocuments)
+  }, [])
 
-  const getTypeColor = (type: string) => {
-    switch (type) {
-      case "Course Material":
-        return "bg-blue-100 text-blue-800"
-      case "Research Paper":
-        return "bg-purple-100 text-purple-800"
-      case "Lab Manual":
-        return "bg-emerald-100 text-emerald-800"
-      case "Exam Paper":
-        return "bg-orange-100 text-orange-800"
+  const filteredDocuments = documents.filter((doc) => {
+    const matchesSearch = doc.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         doc.author.toLowerCase().includes(searchTerm.toLowerCase())
+    const matchesStatus = filterStatus === "all" || doc.status === filterStatus
+    const matchesDepartment = filterDepartment === "all" || doc.department === filterDepartment
+    return matchesSearch && matchesStatus && matchesDepartment
+  })
+
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case "approved":
+        return <Badge className="bg-green-100 text-green-800">Approved</Badge>
+      case "pending":
+        return <Badge className="bg-yellow-100 text-yellow-800">Pending</Badge>
+      case "rejected":
+        return <Badge className="bg-red-100 text-red-800">Rejected</Badge>
       default:
-        return "bg-gray-100 text-gray-800"
+        return <Badge variant="secondary">{status}</Badge>
     }
   }
 
-  const filteredDocuments = documentTree.filter((dept) =>
-    dept.department.toLowerCase().includes(searchTerm.toLowerCase()),
-  )
+  const getTypeBadge = (type: string) => {
+    switch (type) {
+      case "Course Material":
+        return <Badge className="bg-blue-100 text-blue-800">{type}</Badge>
+      case "Research Paper":
+        return <Badge className="bg-purple-100 text-purple-800">{type}</Badge>
+      case "Lab Manual":
+        return <Badge className="bg-emerald-100 text-emerald-800">{type}</Badge>
+      case "Project Guidelines":
+        return <Badge className="bg-orange-100 text-orange-800">{type}</Badge>
+      default:
+        return <Badge variant="outline">{type}</Badge>
+    }
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-6">
-            <div className="flex items-center">
-              <Link href="/dean/dashboard">
-                <Button variant="ghost" size="sm" className="mr-4">
-                  <ArrowLeft className="h-4 w-4 mr-2" />
-                  Back to Dashboard
-                </Button>
-              </Link>
-              <img src="/aastu-university-logo-blue-and-green.png" alt="AASTU Logo" className="h-12 w-12 mr-4" />
-              <div>
-                <h1 className="text-2xl font-bold text-gray-900">Documents Tree</h1>
-                <p className="text-sm text-gray-600">College → Department → Year → Documents</p>
-              </div>
-            </div>
-            <div className="flex items-center space-x-4">
-              <Button variant="outline" size="sm">
-                <Download className="h-4 w-4 mr-2" />
-                Export Report
-              </Button>
-              <Avatar>
-                <AvatarImage src="/placeholder.svg?height=40&width=40" />
-                <AvatarFallback>CD</AvatarFallback>
-              </Avatar>
-            </div>
-          </div>
-        </div>
-      </header>
+      <PageHeader
+        title="College Documents"
+        subtitle="Manage college-wide materials"
+        backUrl="/dean/dashboard"
+        user={user}
+      />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Search and Filter */}
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-2xl font-bold text-gray-900">Documents Tree Structure</h2>
-          <div className="flex space-x-4">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
+          <h2 className="text-2xl font-bold text-gray-900">Document Management</h2>
+          <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-4">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
               <Input
-                placeholder="Search departments..."
+                placeholder="Search documents..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-10 w-64"
@@ -223,132 +188,101 @@ export default function DocumentsTree() {
             </div>
             <Select value={filterStatus} onValueChange={setFilterStatus}>
               <SelectTrigger className="w-40">
-                <SelectValue placeholder="Filter by type" />
+                <SelectValue placeholder="Filter by status" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Types</SelectItem>
-                <SelectItem value="course_material">Course Material</SelectItem>
-                <SelectItem value="research_paper">Research Paper</SelectItem>
-                <SelectItem value="lab_manual">Lab Manual</SelectItem>
-                <SelectItem value="exam_paper">Exam Paper</SelectItem>
+                <SelectItem value="all">All Status</SelectItem>
+                <SelectItem value="approved">Approved</SelectItem>
+                <SelectItem value="pending">Pending</SelectItem>
+                <SelectItem value="rejected">Rejected</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={filterDepartment} onValueChange={setFilterDepartment}>
+              <SelectTrigger className="w-48">
+                <SelectValue placeholder="Filter by department" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Departments</SelectItem>
+                <SelectItem value="Computer Science">Computer Science</SelectItem>
+                <SelectItem value="Electrical Engineering">Electrical Engineering</SelectItem>
+                <SelectItem value="Software Engineering">Software Engineering</SelectItem>
+                <SelectItem value="Mechanical Engineering">Mechanical Engineering</SelectItem>
               </SelectContent>
             </Select>
           </div>
         </div>
 
-        {/* Tree Structure */}
-        <Card>
+        {/* Documents List */}
+        <Card className="shadow-lg border-0 bg-white">
           <CardHeader>
-            <CardTitle className="flex items-center">
-              <FileText className="h-5 w-5 text-blue-600 mr-2" />
-              Hierarchical Document Structure
+            <CardTitle className="flex items-center text-gray-900">
+              <FileText className="h-5 w-5 mr-2 text-blue-600" />
+              College Documents ({filteredDocuments.length})
             </CardTitle>
-            <CardDescription>Browse documents organized by department and academic year</CardDescription>
+            <CardDescription>Browse and manage all college documents</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {filteredDocuments.map((deptTree) => (
-                <div key={deptTree.department} className="border rounded-lg p-4">
-                  {/* Department Level */}
-                  <button
-                    onClick={() => toggleDepartment(deptTree.department)}
-                    className="flex items-center justify-between w-full text-left hover:bg-gray-50 p-2 rounded-lg transition-colors"
-                  >
-                    <div className="flex items-center space-x-3">
-                      {expandedDepartments.includes(deptTree.department) ? (
-                        <ChevronDown className="h-5 w-5 text-gray-500" />
-                      ) : (
-                        <ChevronRight className="h-5 w-5 text-gray-500" />
-                      )}
-                      <Building2 className="h-6 w-6 text-blue-600" />
-                      <div>
-                        <span className="font-semibold text-gray-900 text-lg">{deptTree.department}</span>
-                        <p className="text-sm text-gray-600">Department Code: {deptTree.code}</p>
+              {filteredDocuments.map((doc) => (
+                <div
+                  key={doc.id}
+                  className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  <div className="flex-1">
+                    <div className="flex items-center space-x-3 mb-2">
+                      <h3 className="font-medium text-gray-900">{doc.title}</h3>
+                      {getStatusBadge(doc.status)}
+                      {getTypeBadge(doc.type)}
+                    </div>
+                    <div className="flex items-center space-x-4 text-sm text-gray-600">
+                      <div className="flex items-center">
+                        <User className="h-4 w-4 mr-1" />
+                        {doc.author}
+                      </div>
+                      <div className="flex items-center">
+                        <Building2 className="h-4 w-4 mr-1" />
+                        {doc.department}
+                      </div>
+                      <div className="flex items-center">
+                        <Calendar className="h-4 w-4 mr-1" />
+                        {doc.year}
+                      </div>
+                      <div className="flex items-center">
+                        <Eye className="h-4 w-4 mr-1" />
+                        {doc.views} views
+                      </div>
+                      <div className="flex items-center">
+                        <Download className="h-4 w-4 mr-1" />
+                        {doc.downloads} downloads
                       </div>
                     </div>
-                    <Badge className="bg-blue-100 text-blue-800">{deptTree.totalDocs} total documents</Badge>
-                  </button>
-
-                  {/* Year Level */}
-                  {expandedDepartments.includes(deptTree.department) && (
-                    <div className="mt-4 ml-8 space-y-3">
-                      {deptTree.years.map((yearData) => {
-                        const yearKey = `${deptTree.department}-${yearData.year}`
-                        return (
-                          <div key={yearData.year} className="border-l-2 border-blue-200 pl-4">
-                            <button
-                              onClick={() => toggleYear(yearKey)}
-                              className="flex items-center justify-between w-full text-left hover:bg-gray-50 p-2 rounded-lg transition-colors"
-                            >
-                              <div className="flex items-center space-x-3">
-                                {expandedYears.includes(yearKey) ? (
-                                  <ChevronDown className="h-4 w-4 text-gray-500" />
-                                ) : (
-                                  <ChevronRight className="h-4 w-4 text-gray-500" />
-                                )}
-                                <Calendar className="h-5 w-5 text-emerald-600" />
-                                <span className="font-medium text-gray-700">Academic Year {yearData.year}</span>
-                              </div>
-                              <Badge className="bg-emerald-100 text-emerald-800">
-                                {yearData.documents.length} documents
-                              </Badge>
-                            </button>
-
-                            {/* Documents Level */}
-                            {expandedYears.includes(yearKey) && (
-                              <div className="mt-3 ml-8 space-y-2">
-                                {yearData.documents.map((doc) => (
-                                  <div
-                                    key={doc.id}
-                                    className="flex items-center justify-between p-4 bg-white border rounded-lg shadow-sm hover:shadow-md transition-shadow"
-                                  >
-                                    <div className="flex items-center space-x-4">
-                                      <FileCheck className="h-5 w-5 text-green-600" />
-                                      <div className="flex-1">
-                                        <h4 className="font-medium text-gray-900">{doc.title}</h4>
-                                        <div className="flex items-center space-x-4 text-sm text-gray-600 mt-1">
-                                          <span className="flex items-center">
-                                            <UserCheck className="h-3 w-3 mr-1" />
-                                            Approved by {doc.teacher}
-                                          </span>
-                                          <Badge className={getTypeColor(doc.type)}>{doc.type}</Badge>
-                                          <span>{doc.downloads} downloads</span>
-                                          <span>Approved: {doc.approvedDate}</span>
-                                        </div>
-                                        <div className="flex items-center space-x-2 mt-2">
-                                          {doc.tags.map((tag) => (
-                                            <Badge key={tag} variant="outline" className="text-xs">
-                                              {tag}
-                                            </Badge>
-                                          ))}
-                                        </div>
-                                      </div>
-                                    </div>
-                                    <div className="flex space-x-2">
-                                      <Button variant="outline" size="sm">
-                                        <Eye className="h-4 w-4 mr-2" />
-                                        Preview
-                                      </Button>
-                                      <Button variant="outline" size="sm">
-                                        <Download className="h-4 w-4 mr-2" />
-                                        Download
-                                      </Button>
-                                    </div>
-                                  </div>
-                                ))}
-                              </div>
-                            )}
-                          </div>
-                        )
-                      })}
-                    </div>
-                  )}
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Button variant="outline" size="sm">
+                      <Eye className="h-4 w-4 mr-1" />
+                      View
+                    </Button>
+                    <Button variant="outline" size="sm">
+                      <Download className="h-4 w-4 mr-1" />
+                      Download
+                    </Button>
+                  </div>
                 </div>
               ))}
             </div>
+
+            {filteredDocuments.length === 0 && (
+              <div className="text-center py-12">
+                <FileText className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+                <p className="text-gray-600">No documents found matching your criteria.</p>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
+      
+      {/* Footer */}
+      <Footer />
     </div>
   )
 }

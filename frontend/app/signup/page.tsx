@@ -7,6 +7,7 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { Eye, EyeOff, Mail, Lock, User, ArrowRight, Building, GraduationCap } from "lucide-react"
 import { apiClient, setAuthToken } from "@/lib/api"
+import Footer from "@/components/Footer"
 
 export default function SignupPage() {
   const router = useRouter()
@@ -93,7 +94,20 @@ export default function SignupPage() {
         // Registration successful - redirect to login page
         router.push("/login?registered=true")
       } else {
-        setErrorMessage(response.message || "Registration failed")
+        // Handle validation errors that might be objects
+        let errorMsg = "Registration failed"
+        if (response.message) {
+          if (typeof response.message === 'string') {
+            errorMsg = response.message
+          } else if (typeof response.message === 'object') {
+            errorMsg = JSON.stringify(response.message)
+          }
+        } else if (response.errors) {
+          // Handle Laravel validation errors
+          const errorMessages = Object.values(response.errors).flat()
+          errorMsg = errorMessages.join(', ')
+        }
+        setErrorMessage(errorMsg)
       }
     } catch (error: any) {
       console.error("Registration failed:", error)
@@ -436,6 +450,9 @@ export default function SignupPage() {
           </p>
         </div>
       </div>
+      
+      {/* Footer */}
+      <Footer />
     </div>
   )
 }

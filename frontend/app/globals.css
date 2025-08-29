@@ -70,3 +70,26 @@
 ::-webkit-scrollbar-thumb:hover {
   @apply bg-gray-500;
 }
+
+/* Custom Select component styles */
+.select-content {
+  background-color: white !important;
+  border: 1px solid #e5e7eb !important;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05) !important;
+  z-index: 9999 !important;
+}
+
+.select-item {
+  color: #111827 !important;
+  background-color: white !important;
+  cursor: pointer !important;
+}
+
+.select-item:hover {
+  background-color: #f3f4f6 !important;
+}
+
+.select-item[data-disabled] {
+  color: #6b7280 !important;
+  cursor: not-allowed !important;
+}

@@ -1,122 +1,141 @@
 "use client"
 
-import { useState } from "react"
-import Link from "next/link"
-import { ArrowLeft, Calendar, Clock, MapPin, Users, Plus, Edit, Trash2 } from "lucide-react"
+import { useState, useEffect } from "react"
+import { Calendar, Clock, MapPin, Users, Plus, Edit, Trash2, X } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Textarea } from "@/components/ui/textarea"
+import { apiClient } from "@/lib/api"
+import PageHeader from "@/components/PageHeader"
+import Footer from "@/components/Footer"
 
-const scheduleData = [
-  {
-    id: 1,
-    title: "Data Structures & Algorithms",
-    code: "CS301",
-    type: "lecture",
-    day: "Monday",
-    time: "09:00 - 11:00",
-    location: "Room 201, Building A",
-    students: 32,
-    color: "bg-blue-100 text-blue-800",
-  },
-  {
-    id: 2,
-    title: "Database Systems",
-    code: "CS302",
-    type: "lecture",
-    day: "Tuesday",
-    time: "14:00 - 16:00",
-    location: "Room 305, Building B",
-    students: 28,
-    color: "bg-emerald-100 text-emerald-800",
-  },
-  {
-    id: 3,
-    title: "Data Structures Lab",
-    code: "CS301L",
-    type: "lab",
-    day: "Wednesday",
-    time: "10:00 - 12:00",
-    location: "Computer Lab 1",
-    students: 16,
-    color: "bg-purple-100 text-purple-800",
-  },
-  {
-    id: 4,
-    title: "Software Engineering",
-    code: "CS401",
-    type: "lecture",
-    day: "Thursday",
-    time: "11:00 - 13:00",
-    location: "Room 102, Building C",
-    students: 25,
-    color: "bg-orange-100 text-orange-800",
-  },
-  {
-    id: 5,
-    title: "Database Systems Lab",
-    code: "CS302L",
-    type: "lab",
-    day: "Friday",
-    time: "08:00 - 10:00",
-    location: "Computer Lab 2",
-    students: 14,
-    color: "bg-teal-100 text-teal-800",
-  },
-]
+interface User {
+  id: number
+  name: string
+  email: string
+  role: string
+  department?: string
+  student_id?: string
+  department_id?: number
+}
 
-const upcomingDeadlines = [
-  {
-    id: 1,
-    title: "Assignment 3 - Data Structures",
-    course: "CS301",
-    dueDate: "2024-01-20",
-    type: "assignment",
-    priority: "high",
-  },
-  {
-    id: 2,
-    title: "Midterm Exam - Database Systems",
-    course: "CS302",
-    dueDate: "2024-01-25",
-    type: "exam",
-    priority: "high",
-  },
-  {
-    id: 3,
-    title: "Project Proposal - Software Engineering",
-    course: "CS401",
-    dueDate: "2024-01-30",
-    type: "project",
-    priority: "medium",
-  },
-]
+interface ScheduleItem {
+  id: number
+  title: string
+  code: string
+  type: string
+  day: string
+  time: string
+  location: string
+  students: number
+  color: string
+}
 
-const officeHours = [
-  {
-    day: "Monday",
-    time: "14:00 - 16:00",
-    location: "Office 301, Faculty Building",
-    type: "regular",
-  },
-  {
-    day: "Wednesday",
-    time: "15:00 - 17:00",
-    location: "Office 301, Faculty Building",
-    type: "regular",
-  },
-  {
-    day: "Friday",
-    time: "13:00 - 14:00",
-    location: "Online (Zoom)",
-    type: "online",
-  },
-]
+interface Deadline {
+  id: number
+  title: string
+  course: string
+  dueDate: string
+  type: string
+  priority: string
+  description: string
+  is_completed: boolean
+}
+
+interface OfficeHour {
+  id: number
+  day: string
+  time: string
+  location: string
+  type: string
+  notes: string
+}
+
+interface ScheduleData {
+  schedule: ScheduleItem[]
+  deadlines: Deadline[]
+  officeHours: OfficeHour[]
+}
 
 export default function TeacherSchedule() {
+  const [user, setUser] = useState<User | null>(null)
+  const [scheduleData, setScheduleData] = useState<ScheduleData | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState("weekly")
+  const [showAddModal, setShowAddModal] = useState(false)
+  const [addEventType, setAddEventType] = useState<'schedule' | 'deadline' | 'office-hour'>('schedule')
+  const [addEventLoading, setAddEventLoading] = useState(false)
+  const [addEventError, setAddEventError] = useState<string | null>(null)
+  const [addEventSuccess, setAddEventSuccess] = useState<string | null>(null)
+
+  // Form state for adding events
+  const [scheduleForm, setScheduleForm] = useState({
+    title: '',
+    code: '',
+    type: 'lecture',
+    day: 'Monday',
+    time: '',
+    location: '',
+    students: 0
+  })
+
+  const [deadlineForm, setDeadlineForm] = useState({
+    title: '',
+    course_code: '',
+    type: 'assignment',
+    priority: 'medium',
+    due_date: '',
+    description: ''
+  })
+
+  const [officeHourForm, setOfficeHourForm] = useState({
+    day: 'Monday',
+    time: '',
+    location: '',
+    type: 'regular',
+    notes: ''
+  })
+
+  useEffect(() => {
+    // Load user info from localStorage
+    const userInfo = localStorage.getItem('user_info')
+    if (userInfo) {
+      try {
+        setUser(JSON.parse(userInfo))
+      } catch (e) {
+        console.error('Failed to parse user info:', e)
+      }
+    }
+
+    loadScheduleData()
+  }, [])
+
+  const loadScheduleData = async () => {
+    try {
+      setLoading(true)
+      setError(null)
+      const response = await apiClient.getTeacherSchedule()
+      
+      if (response.success) {
+        setScheduleData(response.data)
+      } else {
+        setError(response.message || 'Failed to load schedule data')
+      }
+    } catch (err) {
+      console.error('Error loading schedule data:', err)
+      setError('Failed to load schedule data. Please try again.')
+    } finally {
+      setLoading(false)
+    }
+  }
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
@@ -131,203 +150,543 @@ export default function TeacherSchedule() {
     }
   }
 
-  return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-6">
-            <div className="flex items-center">
-              <Link href="/teacher/dashboard">
-                <Button variant="ghost" size="sm" className="mr-4">
-                  <ArrowLeft className="h-4 w-4 mr-2" />
-                  Back to Dashboard
-                </Button>
-              </Link>
-              <img src="/aastu-university-logo-blue-and-green.png" alt="AASTU Logo" className="h-12 w-12 mr-4" />
-              <div>
-                <h1 className="text-2xl font-bold text-gray-900">Class Schedule</h1>
-                <p className="text-sm text-gray-600">Manage your teaching schedule and deadlines</p>
-              </div>
-            </div>
-            <div className="flex items-center space-x-4">
-              <Button variant="outline" size="sm">
-                <Plus className="h-4 w-4 mr-2" />
-                Add Event
-              </Button>
-              <Avatar>
-                <AvatarImage src="/placeholder.svg?height=40&width=40" />
-                <AvatarFallback>DT</AvatarFallback>
-              </Avatar>
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    })
+  }
+
+  const handleAddEvent = async () => {
+    try {
+      setAddEventLoading(true)
+      setAddEventError(null)
+      setAddEventSuccess(null)
+
+      let response
+      if (addEventType === 'schedule') {
+        response = await apiClient.addScheduleItem(scheduleForm)
+      } else if (addEventType === 'deadline') {
+        response = await apiClient.addDeadline(deadlineForm)
+      } else {
+        response = await apiClient.addOfficeHour(officeHourForm)
+      }
+
+      if (response.success) {
+        setAddEventSuccess(response.message || 'Event added successfully!')
+        resetForms()
+        // Reload data
+        setTimeout(() => {
+          loadScheduleData()
+          setShowAddModal(false)
+        }, 1500)
+      } else {
+        setAddEventError(response.message || 'Failed to add event')
+      }
+    } catch (err) {
+      console.error('Error adding event:', err)
+      setAddEventError('Failed to add event. Please try again.')
+    } finally {
+      setAddEventLoading(false)
+    }
+  }
+
+  const resetForms = () => {
+    setScheduleForm({
+      title: '', code: '', type: 'lecture', day: 'Monday', time: '', location: '', students: 0
+    })
+    setDeadlineForm({
+      title: '', course_code: '', type: 'assignment', priority: 'medium', due_date: '', description: ''
+    })
+    setOfficeHourForm({
+      day: 'Monday', time: '', location: '', type: 'regular', notes: ''
+    })
+    setAddEventError(null)
+    setAddEventSuccess(null)
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="animate-pulse">
+            <div className="h-8 bg-gray-200 rounded w-1/4 mb-8"></div>
+            <div className="h-12 bg-gray-200 rounded mb-8"></div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {[...Array(6)].map((_, i) => (
+                <div key={i} className="h-48 bg-gray-200 rounded"></div>
+              ))}
             </div>
           </div>
         </div>
-      </header>
+      </div>
+    )
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
+      <PageHeader 
+        title="Class Schedule"
+        subtitle="Manage your teaching schedule and deadlines"
+        showBackButton={true}
+        backUrl="/teacher/dashboard"
+        user={user}
+      >
+        <Button
+          onClick={() => setShowAddModal(true)}
+          className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white"
+        >
+          <Plus className="h-4 w-4 mr-2" />
+          Add Event
+        </Button>
+      </PageHeader>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Error Alert */}
+        {error && (
+          <Alert className="mb-6 border-red-200 bg-red-50">
+            <AlertDescription className="text-red-800">{error}</AlertDescription>
+          </Alert>
+        )}
+
+        {/* Success Alert */}
+        {addEventSuccess && (
+          <Alert className="mb-6 border-green-200 bg-green-50">
+            <AlertDescription className="text-green-800">{addEventSuccess}</AlertDescription>
+          </Alert>
+        )}
+
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
           <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="weekly">Weekly Schedule</TabsTrigger>
-            <TabsTrigger value="deadlines">Upcoming Deadlines</TabsTrigger>
+            <TabsTrigger value="deadlines">Deadlines</TabsTrigger>
             <TabsTrigger value="office-hours">Office Hours</TabsTrigger>
           </TabsList>
 
           <TabsContent value="weekly" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <Calendar className="h-5 w-5 text-blue-600 mr-2" />
+            <Card className="shadow-lg border-0 bg-white">
+              <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-blue-100">
+                <CardTitle className="flex items-center text-blue-900">
+                  <Calendar className="h-5 w-5 mr-2 text-blue-600" />
                   Weekly Class Schedule
                 </CardTitle>
-                <CardDescription>Your regular teaching schedule for this semester</CardDescription>
+                <CardDescription className="text-blue-700">Your teaching schedule for the current week</CardDescription>
               </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {scheduleData.map((item) => (
-                    <Card key={item.id} className="hover:shadow-md transition-shadow">
-                      <CardHeader className="pb-3">
-                        <div className="flex items-start justify-between">
+              <CardContent className="p-6">
+                {scheduleData?.schedule && scheduleData.schedule.length > 0 ? (
+                  <div className="space-y-4">
+                    {scheduleData.schedule.map((item) => (
+                      <div
+                        key={item.id}
+                        className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+                      >
+                        <div className="flex items-center space-x-4">
+                          <div className={`w-3 h-3 rounded-full ${item.color}`}></div>
                           <div>
-                            <CardTitle className="text-lg">{item.title}</CardTitle>
-                            <CardDescription>{item.code}</CardDescription>
-                          </div>
-                          <Badge className={item.color}>{item.type}</Badge>
-                        </div>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="space-y-2">
-                          <div className="flex items-center text-sm text-gray-600">
-                            <Calendar className="h-4 w-4 mr-2" />
-                            {item.day}
-                          </div>
-                          <div className="flex items-center text-sm text-gray-600">
-                            <Clock className="h-4 w-4 mr-2" />
-                            {item.time}
-                          </div>
-                          <div className="flex items-center text-sm text-gray-600">
-                            <MapPin className="h-4 w-4 mr-2" />
-                            {item.location}
-                          </div>
-                          <div className="flex items-center text-sm text-gray-600">
-                            <Users className="h-4 w-4 mr-2" />
-                            {item.students} students
+                            <h4 className="font-semibold text-gray-900">{item.title}</h4>
+                            <p className="text-sm text-gray-600">{item.code} • {item.type}</p>
+                            <div className="flex items-center space-x-4 text-xs text-gray-500 mt-1">
+                              <span className="flex items-center">
+                                <Clock className="h-3 w-3 mr-1" />
+                                {item.time}
+                              </span>
+                              <span className="flex items-center">
+                                <MapPin className="h-3 w-3 mr-1" />
+                                {item.location}
+                              </span>
+                              <span className="flex items-center">
+                                <Users className="h-3 w-3 mr-1" />
+                                {item.students} students
+                              </span>
+                            </div>
                           </div>
                         </div>
-                        <div className="flex space-x-2 mt-4">
-                          <Button size="sm" variant="outline" className="flex-1 bg-transparent">
-                            <Edit className="h-4 w-4 mr-1" />
-                            Edit
+                        <div className="flex items-center space-x-2">
+                          <Button variant="outline" size="sm">
+                            <Edit className="h-4 w-4" />
                           </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="text-red-600 hover:text-red-700 bg-transparent"
-                          >
+                          <Button variant="outline" size="sm">
                             <Trash2 className="h-4 w-4" />
                           </Button>
                         </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8">
+                    <Calendar className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                    <p className="text-gray-600">No schedule items found</p>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
 
           <TabsContent value="deadlines" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <Clock className="h-5 w-5 text-orange-600 mr-2" />
+            <Card className="shadow-lg border-0 bg-white">
+              <CardHeader className="bg-gradient-to-r from-red-50 to-pink-50 border-b border-red-100">
+                <CardTitle className="flex items-center text-red-900">
+                  <Clock className="h-5 w-5 mr-2 text-red-600" />
                   Upcoming Deadlines
                 </CardTitle>
-                <CardDescription>Important dates and deadlines for your courses</CardDescription>
+                <CardDescription className="text-red-700">Track assignment deadlines and important dates</CardDescription>
               </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {upcomingDeadlines.map((deadline) => (
-                    <div
-                      key={deadline.id}
-                      className="flex items-center justify-between p-4 border border-gray-200 rounded-lg"
-                    >
-                      <div className="flex-1">
-                        <h4 className="font-medium text-gray-900">{deadline.title}</h4>
-                        <p className="text-sm text-gray-600">Course: {deadline.course}</p>
-                        <p className="text-sm text-gray-500">Due: {new Date(deadline.dueDate).toLocaleDateString()}</p>
-                      </div>
-                      <div className="flex items-center space-x-3">
-                        <Badge variant="outline">{deadline.type}</Badge>
-                        <Badge className={getPriorityColor(deadline.priority)}>{deadline.priority}</Badge>
-                        <div className="flex space-x-2">
-                          <Button size="sm" variant="outline">
-                            <Edit className="h-4 w-4 mr-1" />
-                            Edit
+              <CardContent className="p-6">
+                {scheduleData?.deadlines && scheduleData.deadlines.length > 0 ? (
+                  <div className="space-y-4">
+                    {scheduleData.deadlines.map((deadline) => (
+                      <div
+                        key={deadline.id}
+                        className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+                      >
+                        <div className="flex items-center space-x-4">
+                          <div className={`w-3 h-3 rounded-full ${deadline.priority === 'high' ? 'bg-red-500' : deadline.priority === 'medium' ? 'bg-yellow-500' : 'bg-green-500'}`}></div>
+                          <div>
+                            <h4 className="font-semibold text-gray-900">{deadline.title}</h4>
+                            <p className="text-sm text-gray-600">{deadline.course} • {deadline.type}</p>
+                            <div className="flex items-center space-x-4 text-xs text-gray-500 mt-1">
+                              <span className="flex items-center">
+                                <Calendar className="h-3 w-3 mr-1" />
+                                Due: {deadline.dueDate}
+                              </span>
+                              <Badge variant={deadline.priority === 'high' ? 'destructive' : deadline.priority === 'medium' ? 'secondary' : 'default'}>
+                                {deadline.priority} priority
+                              </Badge>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Button variant="outline" size="sm">
+                            <Edit className="h-4 w-4" />
                           </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="text-red-600 hover:text-red-700 bg-transparent"
-                          >
+                          <Button variant="outline" size="sm">
                             <Trash2 className="h-4 w-4" />
                           </Button>
                         </div>
                       </div>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8">
+                    <Clock className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                    <p className="text-gray-600">No deadlines found</p>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
 
           <TabsContent value="office-hours" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <Users className="h-5 w-5 text-emerald-600 mr-2" />
+            <Card className="shadow-lg border-0 bg-white">
+              <CardHeader className="bg-gradient-to-r from-green-50 to-emerald-50 border-b border-green-100">
+                <CardTitle className="flex items-center text-green-900">
+                  <Users className="h-5 w-5 mr-2 text-green-600" />
                   Office Hours
                 </CardTitle>
-                <CardDescription>Your availability for student consultations</CardDescription>
+                <CardDescription className="text-green-700">Your scheduled office hours for student consultations</CardDescription>
               </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {officeHours.map((hour, index) => (
-                    <Card key={index} className="hover:shadow-md transition-shadow">
-                      <CardContent className="p-6">
-                        <div className="flex items-start justify-between mb-4">
+              <CardContent className="p-6">
+                {scheduleData?.officeHours && scheduleData.officeHours.length > 0 ? (
+                  <div className="space-y-4">
+                    {scheduleData.officeHours.map((officeHour) => (
+                      <div
+                        key={officeHour.id}
+                        className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+                      >
+                        <div className="flex items-center space-x-4">
+                          <div className={`w-3 h-3 rounded-full ${officeHour.type === 'in-person' ? 'bg-green-500' : 'bg-blue-500'}`}></div>
                           <div>
-                            <h4 className="font-medium text-gray-900">{hour.day}</h4>
-                            <p className="text-sm text-gray-600">{hour.time}</p>
+                            <h4 className="font-semibold text-gray-900">{officeHour.day} Office Hours</h4>
+                            <p className="text-sm text-gray-600">{officeHour.type}</p>
+                            <div className="flex items-center space-x-4 text-xs text-gray-500 mt-1">
+                              <span className="flex items-center">
+                                <Clock className="h-3 w-3 mr-1" />
+                                {officeHour.time}
+                              </span>
+                              <span className="flex items-center">
+                                <MapPin className="h-3 w-3 mr-1" />
+                                {officeHour.location}
+                              </span>
+                            </div>
                           </div>
-                          <Badge variant="outline" className={hour.type === "online" ? "bg-blue-50" : "bg-gray-50"}>
-                            {hour.type}
-                          </Badge>
                         </div>
-                        <div className="flex items-center text-sm text-gray-600">
-                          <MapPin className="h-4 w-4 mr-2" />
-                          {hour.location}
-                        </div>
-                        <div className="flex space-x-2 mt-4">
-                          <Button size="sm" variant="outline" className="flex-1 bg-transparent">
-                            <Edit className="h-4 w-4 mr-1" />
-                            Edit
+                        <div className="flex items-center space-x-2">
+                          <Button variant="outline" size="sm">
+                            <Edit className="h-4 w-4" />
                           </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="text-red-600 hover:text-red-700 bg-transparent"
-                          >
+                          <Button variant="outline" size="sm">
                             <Trash2 className="h-4 w-4" />
                           </Button>
                         </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8">
+                    <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                    <p className="text-gray-600">No office hours scheduled</p>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
         </Tabs>
+
+        {/* Add Event Modal */}
+        <Dialog open={showAddModal} onOpenChange={setShowAddModal}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Add New Event</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div>
+                <Label>Event Type</Label>
+                <Select value={addEventType} onValueChange={(value: 'schedule' | 'deadline' | 'office-hour') => setAddEventType(value)}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="schedule">Class Schedule</SelectItem>
+                    <SelectItem value="deadline">Deadline</SelectItem>
+                    <SelectItem value="office-hour">Office Hour</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {addEventType === 'schedule' && (
+                <div className="space-y-4">
+                  <div>
+                    <Label>Course Title</Label>
+                    <Input
+                      value={scheduleForm.title}
+                      onChange={(e) => setScheduleForm({...scheduleForm, title: e.target.value})}
+                      placeholder="e.g., Data Structures & Algorithms"
+                    />
+                  </div>
+                  <div>
+                    <Label>Course Code</Label>
+                    <Input
+                      value={scheduleForm.code}
+                      onChange={(e) => setScheduleForm({...scheduleForm, code: e.target.value})}
+                      placeholder="e.g., CS301"
+                    />
+                  </div>
+                  <div>
+                    <Label>Type</Label>
+                    <Select value={scheduleForm.type} onValueChange={(value) => setScheduleForm({...scheduleForm, type: value})}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="lecture">Lecture</SelectItem>
+                        <SelectItem value="lab">Lab</SelectItem>
+                        <SelectItem value="tutorial">Tutorial</SelectItem>
+                        <SelectItem value="exam">Exam</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label>Day</Label>
+                    <Select value={scheduleForm.day} onValueChange={(value) => setScheduleForm({...scheduleForm, day: value})}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Monday">Monday</SelectItem>
+                        <SelectItem value="Tuesday">Tuesday</SelectItem>
+                        <SelectItem value="Wednesday">Wednesday</SelectItem>
+                        <SelectItem value="Thursday">Thursday</SelectItem>
+                        <SelectItem value="Friday">Friday</SelectItem>
+                        <SelectItem value="Saturday">Saturday</SelectItem>
+                        <SelectItem value="Sunday">Sunday</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label>Time</Label>
+                    <Input
+                      value={scheduleForm.time}
+                      onChange={(e) => setScheduleForm({...scheduleForm, time: e.target.value})}
+                      placeholder="e.g., 09:00 - 11:00"
+                    />
+                  </div>
+                  <div>
+                    <Label>Location</Label>
+                    <Input
+                      value={scheduleForm.location}
+                      onChange={(e) => setScheduleForm({...scheduleForm, location: e.target.value})}
+                      placeholder="e.g., Room 201, Building A"
+                    />
+                  </div>
+                  <div>
+                    <Label>Number of Students</Label>
+                    <Input
+                      type="number"
+                      value={scheduleForm.students}
+                      onChange={(e) => setScheduleForm({...scheduleForm, students: parseInt(e.target.value) || 0})}
+                      placeholder="e.g., 32"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {addEventType === 'deadline' && (
+                <div className="space-y-4">
+                  <div>
+                    <Label>Title</Label>
+                    <Input
+                      value={deadlineForm.title}
+                      onChange={(e) => setDeadlineForm({...deadlineForm, title: e.target.value})}
+                      placeholder="e.g., Assignment 3 - Data Structures"
+                    />
+                  </div>
+                  <div>
+                    <Label>Course Code</Label>
+                    <Input
+                      value={deadlineForm.course_code}
+                      onChange={(e) => setDeadlineForm({...deadlineForm, course_code: e.target.value})}
+                      placeholder="e.g., CS301"
+                    />
+                  </div>
+                  <div>
+                    <Label>Type</Label>
+                    <Select value={deadlineForm.type} onValueChange={(value) => setDeadlineForm({...deadlineForm, type: value})}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="assignment">Assignment</SelectItem>
+                        <SelectItem value="exam">Exam</SelectItem>
+                        <SelectItem value="project">Project</SelectItem>
+                        <SelectItem value="presentation">Presentation</SelectItem>
+                        <SelectItem value="report">Report</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label>Priority</Label>
+                    <Select value={deadlineForm.priority} onValueChange={(value) => setDeadlineForm({...deadlineForm, priority: value})}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="low">Low</SelectItem>
+                        <SelectItem value="medium">Medium</SelectItem>
+                        <SelectItem value="high">High</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label>Due Date</Label>
+                    <Input
+                      type="date"
+                      value={deadlineForm.due_date}
+                      onChange={(e) => setDeadlineForm({...deadlineForm, due_date: e.target.value})}
+                    />
+                  </div>
+                  <div>
+                    <Label>Description</Label>
+                    <Textarea
+                      value={deadlineForm.description}
+                      onChange={(e) => setDeadlineForm({...deadlineForm, description: e.target.value})}
+                      placeholder="e.g., Implement binary search tree operations"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {addEventType === 'office-hour' && (
+                <div className="space-y-4">
+                  <div>
+                    <Label>Day</Label>
+                    <Select value={officeHourForm.day} onValueChange={(value) => setOfficeHourForm({...officeHourForm, day: value})}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Monday">Monday</SelectItem>
+                        <SelectItem value="Tuesday">Tuesday</SelectItem>
+                        <SelectItem value="Wednesday">Wednesday</SelectItem>
+                        <SelectItem value="Thursday">Thursday</SelectItem>
+                        <SelectItem value="Friday">Friday</SelectItem>
+                        <SelectItem value="Saturday">Saturday</SelectItem>
+                        <SelectItem value="Sunday">Sunday</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label>Time</Label>
+                    <Input
+                      value={officeHourForm.time}
+                      onChange={(e) => setOfficeHourForm({...officeHourForm, time: e.target.value})}
+                      placeholder="e.g., 14:00 - 16:00"
+                    />
+                  </div>
+                  <div>
+                    <Label>Location</Label>
+                    <Input
+                      value={officeHourForm.location}
+                      onChange={(e) => setOfficeHourForm({...officeHourForm, location: e.target.value})}
+                      placeholder="e.g., Office 301, Faculty Building"
+                    />
+                  </div>
+                  <div>
+                    <Label>Type</Label>
+                    <Select value={officeHourForm.type} onValueChange={(value) => setOfficeHourForm({...officeHourForm, type: value})}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="regular">Regular</SelectItem>
+                        <SelectItem value="online">Online</SelectItem>
+                        <SelectItem value="by_appointment">By Appointment</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label>Notes</Label>
+                    <Textarea
+                      value={officeHourForm.notes}
+                      onChange={(e) => setOfficeHourForm({...officeHourForm, notes: e.target.value})}
+                      placeholder="e.g., Available for consultation on Data Structures"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {addEventError && (
+                <Alert className="border-red-200 bg-red-50">
+                  <AlertDescription className="text-red-800">
+                    {addEventError}
+                  </AlertDescription>
+                </Alert>
+              )}
+
+              <div className="flex space-x-2">
+                <Button
+                  onClick={handleAddEvent}
+                  disabled={addEventLoading}
+                  className="flex-1"
+                >
+                  {addEventLoading ? 'Adding...' : 'Add Event'}
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setShowAddModal(false)
+                    resetForms()
+                  }}
+                >
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
+      
+      <Footer />
     </div>
   )
 }

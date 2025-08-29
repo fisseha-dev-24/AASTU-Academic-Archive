@@ -14,9 +14,13 @@ import {
   Activity,
   Download,
   ArrowRight,
+  Loader2,
 } from "lucide-react"
 import Link from "next/link"
 import { useState, useEffect } from "react"
+import { apiClient } from "@/lib/api"
+import PageHeader from "@/components/PageHeader"
+import Footer from "@/components/Footer"
 
 interface UserInfo {
   id: number
@@ -31,9 +35,27 @@ interface UserInfo {
   }
 }
 
+interface DepartmentStats {
+  total_documents: number
+  pending_approval: number
+  approved_this_month: number
+  rejected_this_month: number
+  total_faculty: number
+  total_students: number
+}
+
 export default function DepartmentHeadDashboard() {
   const [userInfo, setUserInfo] = useState<UserInfo | null>(null)
   const [welcomeMessage, setWelcomeMessage] = useState("")
+  const [stats, setStats] = useState<DepartmentStats>({
+    total_documents: 0,
+    pending_approval: 0,
+    approved_this_month: 0,
+    rejected_this_month: 0,
+    total_faculty: 0,
+    total_students: 0
+  })
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     // Get user info from localStorage
@@ -42,22 +64,32 @@ export default function DepartmentHeadDashboard() {
       const user = JSON.parse(storedUserInfo)
       setUserInfo(user)
       
-      // Generate welcome message based on time of day
+      // Set welcome message with time-based greeting
       const hour = new Date().getHours()
-      let timeGreeting = ""
-      if (hour < 12) {
-        timeGreeting = "Good morning"
-      } else if (hour < 17) {
-        timeGreeting = "Good afternoon"
-      } else {
-        timeGreeting = "Good evening"
-      }
+      let greeting = ""
+      if (hour < 12) greeting = "Good morning"
+      else if (hour < 18) greeting = "Good afternoon"
+      else greeting = "Good evening"
       
-      // Extract first name from full name
       const firstName = user.name ? user.name.split(' ')[0] : 'Department Head'
-      setWelcomeMessage(`${timeGreeting}, ${firstName}! Welcome back to your dashboard.`)
+      setWelcomeMessage(`${greeting}, ${firstName}!`)
     }
+    
+    loadDashboardStats()
   }, [])
+
+  const loadDashboardStats = async () => {
+    try {
+      const response = await apiClient.getDepartmentStats()
+      if (response.success && response.data) {
+        setStats(response.data)
+      }
+    } catch (error) {
+      console.error('Error loading dashboard stats:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   // Get user initials for avatar
   const getUserInitials = (name: string) => {
@@ -77,49 +109,29 @@ export default function DepartmentHeadDashboard() {
     return "Computer Science Department" // Default fallback
   }
 
-  // Mock data
-  const departmentStats = {
-    totalTeachers: 24,
-    totalDocuments: 1247,
-    pendingApprovals: 18,
-    approvedThisMonth: 156,
-    rejectedThisMonth: 12,
-    activeCourses: 45,
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-blue-600" />
+          <p className="text-gray-600">Loading dashboard...</p>
+        </div>
+      </div>
+    )
   }
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-6">
-            <div className="flex items-center">
-              <img src="/aastu-university-logo-blue-and-green.png" alt="AASTU Logo" className="h-12 w-12 mr-4" />
-              <div>
-                <h1 className="text-2xl font-bold text-gray-900">Department Head Dashboard</h1>
-                <p className="text-sm text-gray-600">{getDepartmentName()}</p>
-                {welcomeMessage && (
-                  <p className="text-sm text-blue-600 mt-1">{welcomeMessage}</p>
-                )}
-              </div>
-            </div>
-            <div className="flex items-center space-x-4">
-              <Button variant="outline" size="sm">
-                <Download className="h-4 w-4 mr-2" />
-                Export Report
-              </Button>
-              <Avatar>
-                <AvatarImage src="/placeholder.svg?height=40&width=40" />
-                <AvatarFallback>{getUserInitials(userInfo?.name || '')}</AvatarFallback>
-              </Avatar>
-              <div className="text-sm">
-                <p className="font-medium text-gray-900">{userInfo?.name || 'Loading...'}</p>
-                <p className="text-gray-500">{getDepartmentName()}</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </header>
+      <PageHeader
+        title="Department Head Dashboard"
+        subtitle={getDepartmentName()}
+        user={userInfo}
+        showBackButton={false}
+      >
+        {welcomeMessage && (
+          <p className="text-sm text-blue-600">{welcomeMessage}</p>
+        )}
+      </PageHeader>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Quick Stats Cards */}
@@ -130,7 +142,7 @@ export default function DepartmentHeadDashboard() {
                 <Users className="h-8 w-8 text-blue-600" />
                 <div className="ml-4">
                   <p className="text-sm font-medium text-gray-600">Total Teachers</p>
-                  <p className="text-2xl font-bold text-gray-900">{departmentStats.totalTeachers}</p>
+                  <p className="text-2xl font-bold text-gray-900">{stats.total_faculty}</p>
                 </div>
               </div>
             </CardContent>
@@ -142,7 +154,7 @@ export default function DepartmentHeadDashboard() {
                 <FileText className="h-8 w-8 text-emerald-600" />
                 <div className="ml-4">
                   <p className="text-sm font-medium text-gray-600">Total Documents</p>
-                  <p className="text-2xl font-bold text-gray-900">{departmentStats.totalDocuments}</p>
+                  <p className="text-2xl font-bold text-gray-900">{stats.total_documents}</p>
                 </div>
               </div>
             </CardContent>
@@ -154,7 +166,7 @@ export default function DepartmentHeadDashboard() {
                 <Clock className="h-8 w-8 text-yellow-600" />
                 <div className="ml-4">
                   <p className="text-sm font-medium text-gray-600">Pending Approvals</p>
-                  <p className="text-2xl font-bold text-gray-900">{departmentStats.pendingApprovals}</p>
+                  <p className="text-2xl font-bold text-gray-900">{stats.pending_approval}</p>
                 </div>
               </div>
             </CardContent>
@@ -163,10 +175,10 @@ export default function DepartmentHeadDashboard() {
           <Card>
             <CardContent className="p-6">
               <div className="flex items-center">
-                <BookOpen className="h-8 w-8 text-purple-600" />
+                <Users className="h-8 w-8 text-purple-600" />
                 <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600">Active Courses</p>
-                  <p className="text-2xl font-bold text-gray-900">{departmentStats.activeCourses}</p>
+                  <p className="text-sm font-medium text-gray-600">Total Students</p>
+                  <p className="text-2xl font-bold text-gray-900">{stats.total_students}</p>
                 </div>
               </div>
             </CardContent>
@@ -191,7 +203,7 @@ export default function DepartmentHeadDashboard() {
                 <div className="space-y-2">
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-600">Recent Activities</span>
-                    <span className="font-medium text-blue-600">12 new</span>
+                    <span className="font-medium text-blue-600">View</span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-600">Quick Actions</span>
@@ -218,11 +230,11 @@ export default function DepartmentHeadDashboard() {
                 <div className="space-y-2">
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-600">Pending Approvals</span>
-                    <span className="font-medium text-yellow-600">{departmentStats.pendingApprovals}</span>
+                    <span className="font-medium text-yellow-600">{stats.pending_approval}</span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-600">This Month</span>
-                    <span className="font-medium text-green-600">+{departmentStats.approvedThisMonth}</span>
+                    <span className="font-medium text-green-600">+{stats.approved_this_month}</span>
                   </div>
                 </div>
               </CardContent>
@@ -245,11 +257,11 @@ export default function DepartmentHeadDashboard() {
                 <div className="space-y-2">
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-600">Total Faculty</span>
-                    <span className="font-medium text-blue-600">{departmentStats.totalTeachers}</span>
+                    <span className="font-medium text-blue-600">{stats.total_faculty}</span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-600">Active Teachers</span>
-                    <span className="font-medium text-green-600">22</span>
+                    <span className="font-medium text-green-600">{stats.total_faculty}</span>
                   </div>
                 </div>
               </CardContent>
@@ -272,11 +284,15 @@ export default function DepartmentHeadDashboard() {
                 <div className="space-y-2">
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-600">Approval Rate</span>
-                    <span className="font-medium text-green-600">92.5%</span>
+                    <span className="font-medium text-green-600">
+                      {stats.total_documents > 0 
+                        ? Math.round((stats.approved_this_month / stats.total_documents) * 100) 
+                        : 0}%
+                    </span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-600">Performance</span>
-                    <span className="font-medium text-blue-600">Excellent</span>
+                    <span className="font-medium text-blue-600">View Details</span>
                   </div>
                 </div>
               </CardContent>
@@ -299,11 +315,11 @@ export default function DepartmentHeadDashboard() {
                 <div className="space-y-2">
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-600">Active Courses</span>
-                    <span className="font-medium text-blue-600">{departmentStats.activeCourses}</span>
+                    <span className="font-medium text-blue-600">View</span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-600">Total Students</span>
-                    <span className="font-medium text-emerald-600">1,247</span>
+                    <span className="font-medium text-emerald-600">{stats.total_students}</span>
                   </div>
                 </div>
               </CardContent>
@@ -350,23 +366,25 @@ export default function DepartmentHeadDashboard() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div className="text-center p-4 bg-green-50 rounded-lg">
                 <CheckCircle className="h-8 w-8 text-green-600 mx-auto mb-2" />
-                <p className="text-2xl font-bold text-green-600">{departmentStats.approvedThisMonth}</p>
+                <p className="text-2xl font-bold text-green-600">{stats.approved_this_month}</p>
                 <p className="text-sm text-gray-600">Documents Approved This Month</p>
               </div>
               <div className="text-center p-4 bg-yellow-50 rounded-lg">
                 <Clock className="h-8 w-8 text-yellow-600 mx-auto mb-2" />
-                <p className="text-2xl font-bold text-yellow-600">{departmentStats.pendingApprovals}</p>
+                <p className="text-2xl font-bold text-yellow-600">{stats.pending_approval}</p>
                 <p className="text-sm text-gray-600">Pending Approvals</p>
               </div>
               <div className="text-center p-4 bg-blue-50 rounded-lg">
                 <Users className="h-8 w-8 text-blue-600 mx-auto mb-2" />
-                <p className="text-2xl font-bold text-blue-600">22</p>
+                <p className="text-2xl font-bold text-blue-600">{stats.total_faculty}</p>
                 <p className="text-sm text-gray-600">Active Faculty Members</p>
               </div>
             </div>
           </CardContent>
         </Card>
       </div>
+      
+      <Footer />
     </div>
   )
 }

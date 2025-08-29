@@ -1,8 +1,8 @@
 "use client"
 
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
   BarChart3,
   PieChart,
@@ -16,8 +16,32 @@ import {
   XCircle,
 } from "lucide-react"
 import Link from "next/link"
+import PageHeader from "@/components/PageHeader"
+import Footer from "@/components/Footer"
 
 export default function DepartmentAnalytics() {
+  const [user, setUser] = useState<{
+    id: number
+    name: string
+    email: string
+    role: string
+    department?: string
+    student_id?: string
+    department_id?: number
+  } | null>(null)
+
+  // Load user data
+  useEffect(() => {
+    const userInfo = localStorage.getItem('user_info')
+    if (userInfo) {
+      try {
+        const userData = JSON.parse(userInfo)
+        setUser(userData)
+      } catch (error) {
+        console.error('Error parsing user info:', error)
+      }
+    }
+  }, [])
   const departmentStats = {
     totalTeachers: 24,
     totalDocuments: 1247,
@@ -30,35 +54,12 @@ export default function DepartmentAnalytics() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <header className="bg-white border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-6">
-            <div className="flex items-center">
-              <Link href="/department/dashboard">
-                <Button variant="ghost" size="sm" className="mr-4">
-                  <ArrowLeft className="h-4 w-4 mr-2" />
-                  Back to Dashboard
-                </Button>
-              </Link>
-              <img src="/aastu-university-logo-blue-and-green.png" alt="AASTU Logo" className="h-12 w-12 mr-4" />
-              <div>
-                <h1 className="text-2xl font-bold text-gray-900">Department Analytics</h1>
-                <p className="text-sm text-gray-600">Visual analysis and department statistics</p>
-              </div>
-            </div>
-            <div className="flex items-center space-x-4">
-              <Button variant="outline" size="sm">
-                <Download className="h-4 w-4 mr-2" />
-                Export Report
-              </Button>
-              <Avatar>
-                <AvatarImage src="/placeholder.svg?height=40&width=40" />
-                <AvatarFallback>DH</AvatarFallback>
-              </Avatar>
-            </div>
-          </div>
-        </div>
-      </header>
+      <PageHeader
+        title="Department Analytics"
+        subtitle="Performance insights and reports"
+        backUrl="/department/dashboard"
+        user={user}
+      />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Key Metrics */}
@@ -121,7 +122,7 @@ export default function DepartmentAnalytics() {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center">
-                <BarChart3 className="h-5 w-5 text-blue-600 mr-2" />
+                <BarChart3 className="h-5 w-5 text-blue-600 " />
                 Document Approval Trends
               </CardTitle>
               <CardDescription>Monthly approval statistics</CardDescription>
@@ -140,7 +141,7 @@ export default function DepartmentAnalytics() {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center">
-                <PieChart className="h-5 w-5 text-emerald-600 mr-2" />
+                <PieChart className="h-5 w-5 text-emerald-600 " />
                 Document Types Distribution
               </CardTitle>
               <CardDescription>Breakdown by document category</CardDescription>
@@ -162,7 +163,7 @@ export default function DepartmentAnalytics() {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center">
-                <TrendingUp className="h-5 w-5 text-purple-600 mr-2" />
+                <TrendingUp className="h-5 w-5 text-purple-600 " />
                 Teacher Performance
               </CardTitle>
               <CardDescription>Top performing faculty members</CardDescription>
@@ -206,7 +207,7 @@ export default function DepartmentAnalytics() {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center">
-                <Activity className="h-5 w-5 text-orange-600 mr-2" />
+                <Activity className="h-5 w-5 text-orange-600 " />
                 Monthly Statistics
               </CardTitle>
               <CardDescription>Current month performance</CardDescription>
@@ -215,28 +216,28 @@ export default function DepartmentAnalytics() {
               <div className="space-y-4">
                 <div className="flex justify-between items-center p-3 bg-green-50 rounded-lg">
                   <div className="flex items-center">
-                    <CheckCircle className="h-5 w-5 text-green-600 mr-2" />
+                    <CheckCircle className="h-5 w-5 text-green-600 " />
                     <span className="font-medium">Documents Approved</span>
                   </div>
                   <span className="text-lg font-bold text-green-600">+{departmentStats.approvedThisMonth}</span>
                 </div>
                 <div className="flex justify-between items-center p-3 bg-red-50 rounded-lg">
                   <div className="flex items-center">
-                    <XCircle className="h-5 w-5 text-red-600 mr-2" />
+                    <XCircle className="h-5 w-5 text-red-600 " />
                     <span className="font-medium">Documents Rejected</span>
                   </div>
                   <span className="text-lg font-bold text-red-600">-{departmentStats.rejectedThisMonth}</span>
                 </div>
                 <div className="flex justify-between items-center p-3 bg-yellow-50 rounded-lg">
                   <div className="flex items-center">
-                    <Activity className="h-5 w-5 text-yellow-600 mr-2" />
+                    <Activity className="h-5 w-5 text-yellow-600 " />
                     <span className="font-medium">Pending Reviews</span>
                   </div>
                   <span className="text-lg font-bold text-yellow-600">{departmentStats.pendingApprovals}</span>
                 </div>
                 <div className="flex justify-between items-center p-3 bg-blue-50 rounded-lg">
                   <div className="flex items-center">
-                    <TrendingUp className="h-5 w-5 text-blue-600 mr-2" />
+                    <TrendingUp className="h-5 w-5 text-blue-600 " />
                     <span className="font-medium">Average Response Time</span>
                   </div>
                   <span className="text-lg font-bold text-blue-600">2.3 days</span>
@@ -246,6 +247,8 @@ export default function DepartmentAnalytics() {
           </Card>
         </div>
       </div>
+      
+      <Footer />
     </div>
   )
 }
