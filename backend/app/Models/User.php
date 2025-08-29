@@ -42,4 +42,36 @@ class User extends Authenticatable
     {
         return $this->hasMany(DocumentReview::class, 'reviewer_id');
     }
+
+    /**
+     * Get the notifications for the user.
+     */
+    public function notifications()
+    {
+        return $this->hasMany(Notification::class);
+    }
+
+    /**
+     * Get the user activities for the user.
+     */
+    public function activities()
+    {
+        return $this->hasMany(UserActivity::class);
+    }
+
+    /**
+     * Get the document analytics for the user.
+     */
+    public function documentAnalytics()
+    {
+        return $this->hasMany(DocumentAnalytics::class);
+    }
+
+    /**
+     * Get the department that the user heads (if department head).
+     */
+    public function headedDepartment()
+    {
+        return $this->hasOne(Department::class, 'head_id');
+    }
 }

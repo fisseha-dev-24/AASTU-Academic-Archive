@@ -19,4 +19,12 @@ class Department extends Model
     {
         return $this->hasMany(Document::class);
     }
+
+    /**
+     * Get the department head.
+     */
+    public function head()
+    {
+        return $this->belongsTo(User::class, 'head_id');
+    }
 }

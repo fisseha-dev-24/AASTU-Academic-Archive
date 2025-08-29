@@ -49,4 +49,28 @@ class Document extends Model
     {
         return $this->hasMany(DocumentReview::class);
     }
+
+    /**
+     * Get the analytics for this document.
+     */
+    public function analytics()
+    {
+        return $this->hasMany(DocumentAnalytics::class);
+    }
+
+    /**
+     * Get the view count for this document.
+     */
+    public function getViewCountAttribute()
+    {
+        return $this->analytics()->where('action', 'view')->count();
+    }
+
+    /**
+     * Get the download count for this document.
+     */
+    public function getDownloadCountAttribute()
+    {
+        return $this->analytics()->where('action', 'download')->count();
+    }
 }
