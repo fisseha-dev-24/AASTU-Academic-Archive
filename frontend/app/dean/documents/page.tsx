@@ -76,11 +76,21 @@ export default function DeanDocuments() {
     setLoading(true)
     setError(null)
     try {
-      const response = await apiClient.searchDocuments({
-        query: searchTerm,
-        document_type: filterDepartment !== "all" ? filterDepartment : undefined,
-        status: filterStatus !== "all" ? filterStatus : undefined,
-      })
+      const params: any = {}
+      
+      if (searchTerm) {
+        params.query = searchTerm
+      }
+      
+      if (filterDepartment !== "all") {
+        params.document_type = filterDepartment
+      }
+      
+      if (filterStatus !== "all") {
+        params.status = filterStatus
+      }
+
+      const response = await apiClient.getDeanDocuments(params)
 
       if (response.success && response.data) {
         const formattedDocuments = response.data.map((doc: any) => ({

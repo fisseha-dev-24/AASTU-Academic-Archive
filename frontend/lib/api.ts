@@ -511,6 +511,13 @@ class ApiClient {
     });
   }
 
+  async getDeanDocuments(params?: any): Promise<ApiResponse> {
+    const queryString = params ? new URLSearchParams(params).toString() : '';
+    return this.request(`/dean/documents${queryString ? `?${queryString}` : ''}`, {
+      method: 'GET',
+    });
+  }
+
   async getDeanDepartmentAnalytics(): Promise<ApiResponse> {
     return this.request('/dean/department-analytics', {
       method: 'GET',

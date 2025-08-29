@@ -265,6 +265,97 @@ class DeanController extends Controller
     }
 
     /**
+     * Get all documents for Dean (including pending and rejected)
+     */
+    public function getAllDocuments(Request $request): JsonResponse
+    {
+        try {
+            $user = Auth::user();
+            
+            if ($user->role !== 'college_dean') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Access denied. Dean privileges required.'
+                ], 403);
+            }
+
+            $query = Document::with(['user', 'department']);
+
+            // Apply filters
+            if ($request->has('query') && $request->query) {
+                $query->where(function($q) use ($request) {
+                    $q->where('title', 'like', '%' . $request->query . '%')
+                      ->orWhere('description', 'like', '%' . $request->query . '%')
+                      ->orWhereHas('user', function($userQuery) use ($request) {
+                          $userQuery->where('name', 'like', '%' . $request->query . '%');
+                      })
+                      ->orWhereHas('department', function($deptQuery) use ($request) {
+                          $deptQuery->where('name', 'like', '%' . $request->query . '%');
+                      });
+                });
+            }
+
+            if ($request->has('document_type') && $request->document_type !== 'all') {
+                $query->where('document_type', $request->document_type);
+            }
+
+            if ($request->has('status') && $request->status !== 'all') {
+                $query->where('status', $request->status);
+            }
+
+            if ($request->has('year') && $request->year !== 'all') {
+                $query->where('year', $request->year);
+            }
+
+            // Apply sorting
+            $sortBy = $request->get('sort_by', 'created_at');
+            $sortOrder = $request->get('sort_order', 'desc');
+            $query->orderBy($sortBy, $sortOrder);
+
+            // Pagination
+            $perPage = $request->get('per_page', 20);
+            $documents = $query->paginate($perPage);
+
+            $formattedDocuments = $documents->map(function ($document) {
+                return [
+                    'id' => $document->id,
+                    'title' => $document->title,
+                    'author' => $document->user->name,
+                    'department' => $document->department->name ?? 'Unknown',
+                    'type' => $document->document_type,
+                    'date' => $document->created_at->format('Y-m-d'),
+                    'year' => $document->year,
+                    'downloads' => 0, // Will be updated when we have download tracking
+                    'description' => $document->description ?? '',
+                    'keywords' => $document->keywords ? explode(',', $document->keywords) : [],
+                    'fileSize' => '1.5 MB', // Mock for now
+                    'pages' => 0, // Mock for now
+                    'status' => $document->status,
+                ];
+            });
+
+            return response()->json([
+                'success' => true,
+                'data' => $formattedDocuments,
+                'pagination' => [
+                    'current_page' => $documents->currentPage(),
+                    'last_page' => $documents->lastPage(),
+                    'per_page' => $documents->perPage(),
+                    'total' => $documents->total(),
+                    'from' => $documents->firstItem(),
+                    'to' => $documents->lastItem(),
+                ]
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to fetch documents',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
      * Calculate approval rate for a date range
      */
     private function calculateApprovalRate($startDate, $endDate): float

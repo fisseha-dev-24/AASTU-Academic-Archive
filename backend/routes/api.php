@@ -167,6 +167,9 @@ Route::middleware('auth:sanctum')->group(function () {
     // Dashboard routes
     Route::get('/dean/stats', [App\Http\Controllers\DeanController::class, 'getDeanStats']);
     
+    // Documents routes
+    Route::get('/dean/documents', [App\Http\Controllers\DeanController::class, 'getAllDocuments']);
+    
     // Analytics routes
     Route::get('/dean/department-analytics', [App\Http\Controllers\DeanController::class, 'getDepartmentAnalytics']);
     
