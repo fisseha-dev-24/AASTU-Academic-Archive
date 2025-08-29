@@ -1,183 +1,291 @@
-# AASTU Academic Archive
+# 🎓 AASTU Academic Archive System
 
-A comprehensive digital document management system for Addis Ababa Science and Technology University (AASTU).
+A comprehensive academic document management system for Addis Ababa Science and Technology University (AASTU), built with modern web technologies.
 
-## System Architecture
+## 🌟 Features
 
-This project consists of three main components:
+### 👥 Multi-Role System
+- **Students**: Browse, search, and download approved documents
+- **Teachers**: Upload, manage, and track their documents
+- **Department Heads**: Review and approve documents from their department
+- **Deans**: Oversee department activities and access analytics
+- **IT Managers**: System administration and maintenance
 
-1. **Frontend**: Next.js React application with TypeScript
-2. **Backend**: Laravel PHP API
-3. **Database**: MySQL database with sample data
+### 📚 Document Management
+- ✅ **Upload & Storage**: Secure file upload with validation
+- ✅ **Preview & Download**: In-browser preview and secure downloads
+- ✅ **Search & Filter**: Advanced search with multiple filters
+- ✅ **Approval Workflow**: Department head approval system
+- ✅ **Version Control**: Document versioning and history
+- ✅ **Audit Logging**: Complete activity tracking
 
-## Prerequisites
+### 🔐 Security & Authentication
+- ✅ **JWT Authentication**: Secure token-based authentication
+- ✅ **Role-Based Access**: Granular permissions per user role
+- ✅ **File Security**: Protected file access with authorization
+- ✅ **Input Validation**: Comprehensive input sanitization
+- ✅ **CORS Protection**: Secure cross-origin requests
 
-- Node.js (v18 or higher)
-- PHP (v8.1 or higher)
+## 🛠️ Technology Stack
+
+### Backend
+- **Framework**: Laravel 12 (PHP 8.4)
+- **Database**: MySQL 8.0
+- **Authentication**: Laravel Sanctum
+- **File Storage**: Laravel Storage (Local/Cloud)
+- **API**: RESTful API with JSON responses
+
+### Frontend
+- **Framework**: Next.js 14 (React 18)
+- **Language**: TypeScript
+- **Styling**: Tailwind CSS
+- **UI Components**: Radix UI + Shadcn/ui
+- **State Management**: React Context + Hooks
+- **Notifications**: Sonner Toast
+
+### Development Tools
+- **Package Manager**: npm (Frontend) / Composer (Backend)
+- **Version Control**: Git
+- **Code Quality**: ESLint, Prettier
+- **Database**: MySQL with migrations
+
+## 🚀 Quick Start
+
+### Prerequisites
+- Node.js 18+ 
+- PHP 8.4+
+- MySQL 8.0+
 - Composer
-- MySQL (XAMPP or standalone)
-- npm or pnpm
+- Git
 
-## Database Setup
+### Installation
 
-The database has been pre-configured with the following credentials:
-- **Database**: `AASTU_Academic_Archive`
-- **Username**: `root`
-- **Password**: `cipherlegend#24`
-- **Host**: `127.0.0.1`
-- **Port**: `3306`
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/fisseha-dev-24/AASTU-Academic-Archive.git
+   cd AASTU-Academic-Archive
+   ```
 
-### Sample Users
+2. **Backend Setup**
+   ```bash
+   cd backend
+   composer install
+   cp .env.example .env
+   php artisan key:generate
+   php artisan migrate
+   php artisan db:seed
+   php artisan storage:link
+   php artisan serve --host=0.0.0.0 --port=8000
+   ```
 
-The system comes with pre-configured users for testing:
+3. **Frontend Setup**
+   ```bash
+   cd frontend
+   npm install
+   npm run dev
+   ```
 
-| Email | Password | Role | Dashboard |
-|-------|----------|------|-----------|
-| student@aastu.edu.et | password | Student | /student/dashboard |
-| teacher@aastu.edu.et | password | Teacher | /teacher/dashboard |
-| depthead@aastu.edu.et | password | Department Head | /department/dashboard |
-| dean@aastu.edu.et | password | College Dean | /dean/dashboard |
-| admin@aastu.edu.et | password | IT Manager | /admin/dashboard |
+4. **Access the Application**
+   - Frontend: http://localhost:3000
+   - Backend API: http://localhost:8000/api
 
-## Installation & Setup
+### Environment Configuration
 
-### 1. Backend Setup
+#### Backend (.env)
+```env
+APP_NAME="AASTU Academic Archive"
+APP_ENV=local
+APP_KEY=your-app-key
+APP_DEBUG=true
+APP_URL=http://localhost:8000
 
-```bash
-cd backend
+DB_CONNECTION=mysql
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=aastu_archive
+DB_USERNAME=your_username
+DB_PASSWORD=your_password
 
-# Install PHP dependencies
-composer install
-
-# Copy environment file (already done)
-cp prod.env.example .env
-
-# Generate application key (already done)
-php artisan key:generate
-
-# Run database migrations (if needed)
-php artisan migrate
-
-# Start the Laravel server
-php artisan serve --host=0.0.0.0 --port=8000
+SANCTUM_STATEFUL_DOMAINS=localhost:3000,127.0.0.1:3000
+SESSION_DOMAIN=localhost
 ```
 
-The backend will be available at: `http://localhost:8000`
-
-### 2. Frontend Setup
-
-```bash
-cd frontend
-
-# Install dependencies
-npm install
-# or
-pnpm install
-
-# Start the development server
-npm run dev
-# or
-pnpm dev
-```
-
-The frontend will be available at: `http://localhost:3000`
-
-## Features Implemented
-
-### Authentication System
-- ✅ User registration with role selection
-- ✅ User login with role-based redirection
-- ✅ JWT token-based authentication
-- ✅ Role-based access control
-
-### Role-Based Dashboards
-- ✅ Student Dashboard (`/student/dashboard`)
-- ✅ Teacher Dashboard (`/teacher/dashboard`)
-- ✅ Department Head Dashboard (`/department/dashboard`)
-- ✅ College Dean Dashboard (`/dean/dashboard`)
-- ✅ IT Manager Dashboard (`/admin/dashboard`)
-
-### Database Integration
-- ✅ MySQL database with proper schema
-- ✅ Sample departments and categories
-- ✅ Sample users for testing
-- ✅ Foreign key relationships
-
-### API Endpoints
-- ✅ `POST /api/login` - User authentication
-- ✅ `POST /api/register` - User registration
-- ✅ `POST /api/logout` - User logout
-- ✅ `GET /api/departments` - Get departments list
-- ✅ `GET /api/user` - Get current user info
-
-## How to Test
-
-1. **Start both servers** (backend on port 8000, frontend on port 3000)
-2. **Navigate to** `http://localhost:3000`
-3. **Click "Sign In"** to test login functionality
-4. **Use any of the sample users** listed above
-5. **Or click "Sign Up"** to create a new account
-6. **After login/registration**, you'll be redirected to the appropriate dashboard based on your role
-
-## API Communication
-
-The frontend communicates with the Laravel backend through RESTful API endpoints:
-
-- **Base URL**: `http://localhost:8000/api`
-- **Authentication**: JWT tokens stored in localStorage
-- **CORS**: Configured to allow requests from `http://localhost:3000`
-
-## File Structure
+## 📁 Project Structure
 
 ```
-aastu_academic_archive/
-├── backend/                 # Laravel API
+AASTU-Academic-Archive/
+├── backend/                 # Laravel API Backend
 │   ├── app/
 │   │   ├── Http/Controllers/
-│   │   │   └── Auth/        # Authentication controllers
-│   │   └── Models/          # Eloquent models
+│   │   ├── Models/
+│   │   └── Middleware/
+│   ├── database/
+│   │   ├── migrations/
+│   │   └── seeders/
 │   ├── routes/
-│   │   └── api.php          # API routes
-│   └── config/
-│       └── cors.php         # CORS configuration
-├── frontend/                # Next.js application
-│   ├── app/                 # App router pages
+│   └── storage/
+├── frontend/               # Next.js Frontend
+│   ├── app/
+│   │   ├── student/        # Student pages
+│   │   ├── teacher/        # Teacher pages
+│   │   ├── department/     # Department head pages
+│   │   └── dean/          # Dean pages
+│   ├── components/
 │   ├── lib/
-│   │   └── api.ts          # API client utilities
-│   └── components/         # React components
-└── Database_design/        # Database schema files
+│   └── contexts/
+└── README.md
 ```
 
-## Next Steps
+## 🔧 API Documentation
 
-The basic authentication and role-based routing system is now connected. Future enhancements can include:
+### Authentication
+```bash
+POST /api/login
+POST /api/register
+POST /api/logout
+```
 
-1. Document upload and management
-2. Document review workflow
-3. User profile management
-4. Advanced search and filtering
-5. File storage integration
-6. Email notifications
-7. Audit logging
-8. Advanced permissions system
+### Student Endpoints
+```bash
+GET /api/student/search-documents
+GET /api/student/exam-materials
+GET /api/student/videos
+GET /api/student/suggestions
+GET /api/student/stats
+```
 
-## Troubleshooting
+### Teacher Endpoints
+```bash
+GET /api/teacher/documents
+POST /api/teacher/upload-document
+GET /api/teacher/stats
+```
 
-### Database Connection Issues
-- Ensure MySQL is running (XAMPP or standalone)
-- Verify database credentials in `backend/.env`
-- Check if the database `AASTU_Academic_Archive` exists
+### Department Head Endpoints
+```bash
+GET /api/department/pending-documents
+POST /api/department/review-document/{id}
+GET /api/department/stats
+```
 
-### CORS Issues
-- Ensure the backend is running on port 8000
-- Check CORS configuration in `backend/config/cors.php`
-- Verify frontend is making requests to the correct API URL
+### Document Endpoints
+```bash
+GET /api/documents/{id}/preview
+GET /api/documents/{id}/download
+```
 
-### Authentication Issues
-- Clear browser localStorage if tokens are corrupted
-- Check browser console for API errors
-- Verify the backend is responding to API requests
+## 👥 User Roles & Permissions
 
-## Support
+### Student
+- Browse approved documents
+- Search and filter documents
+- Download documents
+- View personal profile
+- Access exam materials and videos
 
-For technical support, contact: support@aastu.edu.et
+### Teacher
+- Upload documents
+- Manage own documents
+- View document analytics
+- Access student feedback
+- Manage schedule and office hours
+
+### Department Head
+- Review pending documents
+- Approve/reject documents
+- View department analytics
+- Manage faculty members
+- Generate reports
+
+### Dean
+- Oversee all departments
+- Access institutional analytics
+- View faculty management
+- Generate institutional reports
+
+## 🔒 Security Features
+
+- **Authentication**: JWT tokens with Sanctum
+- **Authorization**: Role-based access control
+- **File Security**: Protected file access
+- **Input Validation**: Comprehensive validation
+- **Audit Logging**: Complete activity tracking
+- **CORS Protection**: Secure cross-origin requests
+
+## 📊 Database Schema
+
+### Core Tables
+- `users` - User accounts and roles
+- `departments` - University departments
+- `documents` - Document metadata
+- `document_reviews` - Approval workflow
+- `audit_logs` - Activity tracking
+
+### Supporting Tables
+- `schedules` - Teacher schedules
+- `feedback` - Student feedback
+- `deadlines` - Academic deadlines
+- `office_hours` - Teacher office hours
+
+## 🧪 Testing
+
+### Backend Testing
+```bash
+cd backend
+php artisan test
+```
+
+### Frontend Testing
+```bash
+cd frontend
+npm test
+```
+
+## 🚀 Deployment
+
+### Production Setup
+1. Configure production environment variables
+2. Set up production database
+3. Configure file storage (AWS S3 recommended)
+4. Set up SSL certificates
+5. Configure web server (Nginx/Apache)
+
+### Docker Deployment
+```bash
+docker-compose up -d
+```
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Add tests if applicable
+5. Submit a pull request
+
+## 📝 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 👨‍💻 Authors
+
+- **Fisseha Akele** - *Initial work* - [fisseha-dev-24](https://github.com/fisseha-dev-24)
+
+## 🙏 Acknowledgments
+
+- Addis Ababa Science and Technology University
+- Laravel Framework Team
+- Next.js Team
+- Tailwind CSS Team
+- All contributors and supporters
+
+## 📞 Support
+
+For support and questions:
+- Create an issue on GitHub
+- Contact: [Your Contact Information]
+- Documentation: [Link to Documentation]
+
+---
+
+**Built with ❤️ for AASTU Academic Community**
