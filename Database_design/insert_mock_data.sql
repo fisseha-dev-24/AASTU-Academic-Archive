@@ -46,6 +46,8 @@
 -- -------------------------------
 -- Departments
 -- -------------------------------
+USE AASTU_Academic_Archive;
+
 INSERT INTO departments (name) VALUES
 ('Computer Science'),
 ('Electrical Engineering'),
@@ -106,12 +108,11 @@ VALUES
 -- -------------------------------
 INSERT INTO document_reviews (document_id, reviewer_id, status, comments)
 VALUES
-(1, 101, 'approved', 'Well-written and meets academic standards.'),
-(2, 102, 'rejected', 'Needs more data analysis and references.'),
-(3, 105, 'approved', 'Excellent structural calculations.'),
-(4, 101, 'pending', 'Waiting for supervisor feedback.'),
-(5, 104, 'approved', 'Good coverage of past exams.');
-
+(1, 11, 'approved', 'Well-written and meets academic standards.'),
+(2, 12, 'rejected', 'Needs more data analysis and references.'),
+(3, 15, 'approved', 'Excellent structural calculations.'),
+(4, 11, 'pending', 'Waiting for supervisor feedback.'),
+(5, 14, 'approved', 'Good coverage of past exams.');
 -- -------------------------------
 -- Audit Logs
 -- -------------------------------

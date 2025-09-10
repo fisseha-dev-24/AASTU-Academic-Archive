@@ -210,27 +210,27 @@ export default function BrowseArchive() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-amber-50">
       <PageHeader
         title="Browse Archive"
-        subtitle="Search and explore AASTU document archive"
+        subtitle="Search and explore AASTU Digital Repository"
         backUrl="/student/dashboard"
         user={user}
       />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Search and Filters */}
-        <Card className="mb-8">
+        <Card className="mb-8 shadow-lg border-0 bg-white/80 backdrop-blur-sm border border-blue-100 rounded-2xl">
           <CardHeader>
             <div className="flex items-center justify-between">
               <div>
-                <CardTitle className="flex items-center">
-                  <Search className="h-5 w-5 mr-2" />
+                <CardTitle className="flex items-center text-gray-800">
+                  <Search className="h-5 w-5 mr-2 text-gray-600" />
                   Advanced Search
                 </CardTitle>
-                <CardDescription>Find documents by title, author, keywords, or content</CardDescription>
+                <CardDescription className="text-gray-700">Find documents by title, author, keywords, or content</CardDescription>
               </div>
-              <Button variant="outline" size="sm" onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}>
+              <Button variant="outline" size="sm" onClick={() => setShowAdvancedFilters(!showAdvancedFilters)} className="border-amber-200 text-amber-800 hover:bg-amber-50 hover:border-amber-300 rounded-xl">
                 <SlidersHorizontal className="h-4 w-4 mr-2" />
                 {showAdvancedFilters ? "Hide" : "Show"} Advanced Filters
               </Button>
@@ -245,9 +245,10 @@ export default function BrowseArchive() {
                     placeholder="Search documents, authors, keywords, or content..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
+                    className="rounded-xl border-blue-200 focus:border-blue-400"
                   />
                 </div>
-                <Button onClick={loadDocuments}>
+                <Button onClick={loadDocuments} className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 rounded-xl">
                   <Search className="h-4 w-4 mr-2" />
                   Search
                 </Button>
@@ -256,7 +257,7 @@ export default function BrowseArchive() {
               {/* Basic Filters */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <Select value={selectedType} onValueChange={setSelectedType}>
-                  <SelectTrigger>
+                  <SelectTrigger className="rounded-xl border-blue-200 focus:border-blue-400">
                     <SelectValue placeholder="Document Type" />
                   </SelectTrigger>
                   <SelectContent>
@@ -270,7 +271,7 @@ export default function BrowseArchive() {
                 </Select>
 
                 <Select value={selectedDepartment} onValueChange={setSelectedDepartment}>
-                  <SelectTrigger>
+                  <SelectTrigger className="rounded-xl border-amber-200 focus:border-amber-400">
                     <SelectValue placeholder="Department" />
                   </SelectTrigger>
                   <SelectContent>
@@ -284,7 +285,7 @@ export default function BrowseArchive() {
                 </Select>
 
                 <Select value={selectedYear} onValueChange={setSelectedYear}>
-                  <SelectTrigger>
+                  <SelectTrigger className="rounded-xl border-slate-200 focus:border-slate-400">
                     <SelectValue placeholder="Year" />
                   </SelectTrigger>
                   <SelectContent>
@@ -360,7 +361,7 @@ export default function BrowseArchive() {
 
                     {/* Clear Filters */}
                     <div className="flex justify-end">
-                      <Button variant="outline" size="sm" onClick={clearAllFilters}>
+                      <Button variant="outline" size="sm" onClick={clearAllFilters} className="border-slate-200 text-slate-700 hover:bg-slate-50 hover:border-slate-300 rounded-xl">
                         <X className="h-4 w-4 mr-2" />
                         Clear All Filters
                       </Button>
@@ -430,13 +431,13 @@ export default function BrowseArchive() {
 
           {loading ? (
             <div className="text-center py-12">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-              <p className="mt-4 text-gray-600">Loading documents...</p>
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-600 mx-auto"></div>
+              <p className="mt-4 text-gray-700">Loading documents...</p>
             </div>
           ) : (
             <div className="grid gap-6">
               {documents.map((doc) => (
-                <Card key={doc.id} className="hover:shadow-md transition-shadow">
+                <Card key={doc.id} className="hover:shadow-lg transition-all duration-300 shadow-lg border-0 bg-white/80 backdrop-blur-sm border border-blue-100 rounded-2xl">
                   <CardContent className="p-6">
                     <div className="flex justify-between items-start mb-4">
                       <div className="flex-1">
@@ -445,32 +446,32 @@ export default function BrowseArchive() {
 
                         <div className="flex items-center space-x-4 text-sm text-gray-500 mb-3">
                           <div className="flex items-center">
-                            <User className="h-4 w-4 mr-1" />
+                            <User className="h-4 w-4 mr-1 text-blue-600" />
                             {doc.author}
                           </div>
                           <div className="flex items-center">
-                            <BookOpen className="h-4 w-4 mr-1" />
+                            <BookOpen className="h-4 w-4 mr-1 text-amber-600" />
                             {doc.department}
                           </div>
                           <div className="flex items-center">
-                            <Calendar className="h-4 w-4 mr-1" />
+                            <Calendar className="h-4 w-4 mr-1 text-slate-600" />
                             {doc.date}
                           </div>
                           <div className="flex items-center">
-                            <Download className="h-4 w-4 mr-1" />
+                            <Download className="h-4 w-4 mr-1 text-blue-600" />
                             {doc.downloads} downloads
                           </div>
                         </div>
 
                         <div className="flex items-center space-x-2 mb-4">
-                          <Badge variant="secondary">{doc.type}</Badge>
+                          <Badge variant="secondary" className="bg-blue-100 text-blue-800">{doc.type}</Badge>
                           {doc.keywords.slice(0, 4).map((keyword, index) => (
-                            <Badge key={index} variant="outline" className="text-xs">
+                            <Badge key={index} variant="outline" className="text-xs border-amber-200 text-amber-700">
                               {keyword}
                             </Badge>
                           ))}
                           {doc.keywords.length > 4 && (
-                            <Badge variant="outline" className="text-xs">
+                            <Badge variant="outline" className="text-xs border-slate-200 text-slate-700">
                               +{doc.keywords.length - 4} more
                             </Badge>
                           )}
@@ -478,11 +479,11 @@ export default function BrowseArchive() {
                       </div>
 
                       <div className="flex flex-col space-y-2 ml-6">
-                        <Button size="sm" onClick={() => handleViewDocument(doc.id)}>
+                        <Button size="sm" onClick={() => handleViewDocument(doc.id)} className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 rounded-xl">
                           <Eye className="h-4 w-4 mr-2" />
                           View
                         </Button>
-                        <Button size="sm" variant="outline" onClick={() => handleDownloadDocument(doc.id)}>
+                        <Button size="sm" variant="outline" onClick={() => handleDownloadDocument(doc.id)} className="border-amber-200 text-amber-800 hover:bg-amber-50 hover:border-amber-300 rounded-xl">
                           <Download className="h-4 w-4 mr-2" />
                           Download
                         </Button>
@@ -495,7 +496,7 @@ export default function BrowseArchive() {
           )}
 
           {!loading && documents.length === 0 && (
-            <Card>
+            <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm border border-slate-200 rounded-2xl">
               <CardContent className="p-12 text-center">
                 <Search className="h-12 w-12 text-gray-300 mx-auto mb-4" />
                 <h3 className="text-lg font-medium text-gray-900 mb-2">No documents found</h3>

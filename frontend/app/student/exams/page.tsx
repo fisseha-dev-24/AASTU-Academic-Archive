@@ -102,23 +102,23 @@ export default function ExamMaterialsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-amber-50">
       <PageHeader
         title="Exam Materials"
-        subtitle="Past papers and model solutions"
+        subtitle="Past papers and model solutions from AASTU Digital Repository"
         backUrl="/student/dashboard"
         user={user}
       />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Search and Filters */}
-        <Card className="mb-8">
+        <Card className="mb-8 shadow-lg border-0 bg-white/80 backdrop-blur-sm border border-blue-100 rounded-2xl">
           <CardHeader>
-            <CardTitle className="flex items-center">
-              <Filter className="h-5 w-5  text-purple-600" />
+            <CardTitle className="flex items-center text-blue-800">
+              <Filter className="h-5 w-5 mr-2 text-blue-600" />
               Search & Filter
             </CardTitle>
-            <CardDescription>Find specific exam materials by course, year, or department</CardDescription>
+            <CardDescription className="text-gray-700">Find specific exam materials by course, year, or department</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -127,11 +127,11 @@ export default function ExamMaterialsPage() {
                   placeholder="Search by course name, code, or keywords..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full"
+                  className="w-full rounded-xl border-blue-200 focus:border-blue-400"
                 />
               </div>
               <Select value={selectedYear} onValueChange={setSelectedYear}>
-                <SelectTrigger>
+                <SelectTrigger className="rounded-xl border-amber-200 focus:border-amber-400">
                   <SelectValue placeholder="Select Year" />
                 </SelectTrigger>
                 <SelectContent>
@@ -143,7 +143,7 @@ export default function ExamMaterialsPage() {
                 </SelectContent>
               </Select>
               <Select value={selectedDepartment} onValueChange={setSelectedDepartment}>
-                <SelectTrigger>
+                <SelectTrigger className="rounded-xl border-slate-200 focus:border-slate-400">
                   <SelectValue placeholder="Select Department" />
                 </SelectTrigger>
                 <SelectContent>
@@ -168,52 +168,52 @@ export default function ExamMaterialsPage() {
 
           {loading ? (
             <div className="text-center py-12">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto"></div>
-              <p className="mt-4 text-gray-600">Loading exam materials...</p>
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+              <p className="mt-4 text-gray-700">Loading exam materials...</p>
             </div>
           ) : (
             <div className="grid gap-6">
               {examMaterials.map((exam) => (
-                <Card key={exam.id} className="hover:shadow-md transition-shadow">
+                <Card key={exam.id} className="hover:shadow-lg transition-all duration-300 shadow-lg border-0 bg-white/80 backdrop-blur-sm border border-blue-100 rounded-2xl">
                   <CardContent className="p-6">
                     <div className="flex justify-between items-start mb-4">
                       <div className="flex-1">
                         <h3 className="text-lg font-semibold text-gray-900 mb-2">{exam.title}</h3>
                         <div className="flex items-center space-x-4 text-sm text-gray-600 mb-3">
                           <div className="flex items-center">
-                            <FileQuestion className="h-4 w-4 mr-1" />
+                            <FileQuestion className="h-4 w-4 mr-1 text-blue-600" />
                             {exam.course}
                           </div>
                           <div className="flex items-center">
-                            <Calendar className="h-4 w-4 mr-1" />
+                            <Calendar className="h-4 w-4 mr-1 text-amber-600" />
                             {exam.year} - {exam.semester}
                           </div>
                           <div className="flex items-center">
-                            <Clock className="h-4 w-4 mr-1" />
+                            <Clock className="h-4 w-4 mr-1 text-slate-600" />
                             {exam.uploadDate}
                           </div>
                           <div className="flex items-center">
-                            <Download className="h-4 w-4 mr-1" />
+                            <Download className="h-4 w-4 mr-1 text-blue-600" />
                             {exam.downloads} downloads
                           </div>
                         </div>
 
                         <div className="flex items-center space-x-2 mb-4">
-                          <Badge variant="secondary">{exam.department}</Badge>
-                          <Badge variant={exam.hasAnswers ? "default" : "outline"}>
+                          <Badge variant="secondary" className="bg-blue-100 text-blue-800">{exam.department}</Badge>
+                          <Badge variant={exam.hasAnswers ? "default" : "outline"} className={exam.hasAnswers ? "bg-amber-100 text-amber-800" : "border-amber-200 text-amber-700"}>
                             {exam.hasAnswers ? "With Answers" : "No Answers"}
                           </Badge>
-                          <Badge variant="outline">{exam.type}</Badge>
+                          <Badge variant="outline" className="border-slate-200 text-slate-700">{exam.type}</Badge>
                         </div>
                       </div>
 
                       <div className="flex flex-col space-y-2 ml-6">
-                        <Button size="sm" onClick={() => handleViewExam(exam.id)}>
-                          <Eye className="h-4 w-4 " />
+                        <Button size="sm" onClick={() => handleViewExam(exam.id)} className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 rounded-xl">
+                          <Eye className="h-4 w-4 mr-2" />
                           View
                         </Button>
-                        <Button size="sm" variant="outline" onClick={() => handleDownloadExam(exam.id)}>
-                          <Download className="h-4 w-4 " />
+                        <Button size="sm" variant="outline" onClick={() => handleDownloadExam(exam.id)} className="border-amber-200 text-amber-800 hover:bg-amber-50 hover:border-amber-300 rounded-xl">
+                          <Download className="h-4 w-4 mr-2" />
                           Download
                         </Button>
                       </div>
@@ -225,7 +225,7 @@ export default function ExamMaterialsPage() {
           )}
 
           {!loading && examMaterials.length === 0 && (
-            <Card>
+            <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm border border-slate-200 rounded-2xl">
               <CardContent className="p-12 text-center">
                 <FileQuestion className="h-12 w-12 text-gray-300 mx-auto mb-4" />
                 <h3 className="text-lg font-medium text-gray-900 mb-2">No exam materials found</h3>

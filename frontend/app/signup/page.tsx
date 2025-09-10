@@ -29,6 +29,7 @@ export default function SignupPage() {
   })
 
   const clearError = () => {
+    
     setErrorMessage("")
   }
 
@@ -140,23 +141,23 @@ export default function SignupPage() {
   ]
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-emerald-50 py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-amber-50 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-2xl mx-auto">
         {/* Header */}
-        <div className="text-center mb-8">
-          <Link href="/" className="inline-flex items-center space-x-3 mb-6">
-            <img src="/aastu-university-logo-blue-and-green.png" alt="AASTU Logo" className="h-12 w-12" />
+        <div className="text-center mb-10">
+          <Link href="/" className="inline-flex items-center space-x-4 mb-8">
+            <img src="/aastu-university-logo-blue-and-green.png" alt="AASTU Logo" className="h-14 w-14" />
             <div className="text-left">
-              <h1 className="text-xl font-bold text-gray-900">AASTU Archive</h1>
-              <p className="text-sm text-gray-600">Digital Document System</p>
+              <h1 className="text-2xl font-bold bg-gradient-to-r from-amber-700 to-blue-800 bg-clip-text text-transparent">AASTU</h1>
+              <p className="text-sm text-gray-600 font-medium">Digital Repository</p>
             </div>
           </Link>
-          <h2 className="text-3xl font-bold text-gray-900">Create Account</h2>
-          <p className="mt-2 text-gray-600">Join the AASTU digital archive community</p>
+          <h2 className="text-4xl font-bold text-gray-900">Join Our Community</h2>
+          <p className="mt-3 text-gray-700 text-lg">Create your account and start exploring academic resources</p>
         </div>
 
         {/* Signup Form */}
-        <div className="aastu-card">
+        <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-8 shadow-xl border border-amber-100">
           <form className="space-y-6" onSubmit={handleSubmit}>
             {/* User Type Selection */}
             <div>
@@ -422,19 +423,19 @@ export default function SignupPage() {
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full aastu-button-primary flex items-center justify-center space-x-2 py-3 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full bg-gradient-to-r from-amber-600 to-amber-700 text-white hover:from-amber-700 hover:to-amber-800 font-semibold py-4 px-6 rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl flex items-center justify-center space-x-3 disabled:opacity-50 disabled:cursor-not-allowed text-lg"
             >
               <span>{isLoading ? "Creating Account..." : "Create Account"}</span>
-              {!isLoading && <ArrowRight className="h-5 w-5" />}
+              {!isLoading && <ArrowRight className="h-6 w-6" />}
             </button>
           </form>
 
           {/* Login Link */}
-          <div className="mt-6 text-center">
-            <p className="text-sm text-gray-600">
+          <div className="mt-8 text-center">
+            <p className="text-gray-700">
               Already have an account?{" "}
-              <Link href="/login" className="font-medium text-blue-600 hover:text-blue-500">
-                Sign in here
+              <Link href="/login" className="font-semibold text-blue-800 hover:text-blue-900 transition-colors duration-200">
+                Sign In
               </Link>
             </p>
           </div>

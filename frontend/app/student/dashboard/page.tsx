@@ -136,10 +136,10 @@ export default function StudentDashboard() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-amber-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading dashboard...</p>
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-amber-600 mx-auto"></div>
+          <p className="mt-4 text-gray-700">Loading dashboard...</p>
         </div>
       </div>
     )
@@ -150,15 +150,15 @@ export default function StudentDashboard() {
   const studentId = user?.student_id || 'AASTU/2021/001' // Fallback if not available
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-amber-50">
       <PageHeader
         title="Student Dashboard"
-        subtitle="AASTU Archive System"
+        subtitle="AASTU Digital Repository"
         user={user}
         showBackButton={false}
       >
         {welcomeMessage && (
-          <p className="text-sm text-blue-600">{welcomeMessage}</p>
+          <p className="text-sm text-amber-700">{welcomeMessage}</p>
         )}
       </PageHeader>
 
@@ -167,55 +167,55 @@ export default function StudentDashboard() {
         {/* Welcome Message */}
         {welcomeMessage && (
           <div className="mb-8">
-            <div className="bg-white rounded-lg shadow-sm border border-blue-200 p-6">
-              <h2 className="text-xl font-semibold text-blue-900 mb-2">{welcomeMessage}</h2>
-              <p className="text-blue-700">Welcome back to your student dashboard. Here's what's happening with your academic resources.</p>
+            <div className="bg-white/80 backdrop-blur-sm rounded-xl shadow-lg border border-amber-200 p-6">
+              <h2 className="text-xl font-semibold bg-gradient-to-r from-amber-700 to-blue-800 bg-clip-text text-transparent mb-2">{welcomeMessage}</h2>
+              <p className="text-gray-700">Welcome back to your student dashboard. Here's what's happening with your academic resources.</p>
             </div>
           </div>
         )}
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <Card className="shadow-lg border-0 bg-white">
+          <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm border border-blue-100 rounded-2xl">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-blue-700">Documents Accessed</CardTitle>
+              <CardTitle className="text-sm font-medium text-blue-800">Documents Accessed</CardTitle>
               <FileText className="h-4 w-4 text-blue-600" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-blue-600">{stats.documentsAccessed}</div>
+              <div className="text-2xl font-bold text-blue-800">{stats.documentsAccessed}</div>
               <p className="text-xs text-gray-600">Total documents viewed</p>
             </CardContent>
           </Card>
 
-          <Card className="shadow-lg border-0 bg-white">
+          <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm border border-amber-100 rounded-2xl">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-emerald-700">Searches This Week</CardTitle>
-              <Search className="h-4 w-4 text-emerald-600" />
+              <CardTitle className="text-sm font-medium text-amber-700">Searches This Week</CardTitle>
+              <Search className="h-4 w-4 text-amber-600" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-emerald-600">{stats.searchesThisWeek}</div>
+              <div className="text-2xl font-bold text-amber-700">{stats.searchesThisWeek}</div>
               <p className="text-xs text-gray-600">Research queries made</p>
             </CardContent>
           </Card>
 
-          <Card className="shadow-lg border-0 bg-white">
+          <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm border border-slate-200 rounded-2xl">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-purple-700">Downloads</CardTitle>
-              <Download className="h-4 w-4 text-purple-600" />
+              <CardTitle className="text-sm font-medium text-slate-700">Downloads</CardTitle>
+              <Download className="h-4 w-4 text-slate-600" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-purple-600">{stats.downloads}</div>
+              <div className="text-2xl font-bold text-slate-700">{stats.downloads}</div>
               <p className="text-xs text-gray-600">Documents downloaded</p>
             </CardContent>
           </Card>
 
-          <Card className="shadow-lg border-0 bg-white">
+          <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm border border-blue-100 rounded-2xl">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-orange-700">This Semester</CardTitle>
-              <GraduationCap className="h-4 w-4 text-orange-600" />
+              <CardTitle className="text-sm font-medium text-blue-800">This Semester</CardTitle>
+              <GraduationCap className="h-4 w-4 text-blue-600" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-orange-600">{stats.semesterDocuments}</div>
+              <div className="text-2xl font-bold text-blue-800">{stats.semesterDocuments}</div>
               <p className="text-xs text-gray-600">Semester materials</p>
             </CardContent>
           </Card>
@@ -224,72 +224,72 @@ export default function StudentDashboard() {
         {/* Main Action Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
           <Link href="/student/browse">
-            <Card className="shadow-lg border-0 bg-white hover:shadow-xl transition-all duration-200 cursor-pointer border-2 border-blue-200 hover:border-blue-400">
+            <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm hover:shadow-xl transition-all duration-300 cursor-pointer border border-blue-200 hover:border-blue-400 group rounded-2xl">
               <CardHeader className="text-center pb-4">
-                <div className="mx-auto w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mb-4">
+                <div className="mx-auto w-16 h-16 bg-gradient-to-br from-blue-100 to-blue-200 rounded-full flex items-center justify-center mb-4 group-hover:from-blue-200 group-hover:to-blue-300 transition-all duration-300">
                   <Search className="h-8 w-8 text-blue-600" />
                 </div>
-                <CardTitle className="text-blue-600">Browse Documents</CardTitle>
+                <CardTitle className="text-blue-800">Browse Documents</CardTitle>
                 <CardDescription>Advanced search & filtering</CardDescription>
               </CardHeader>
             </Card>
           </Link>
 
           <Link href="/student/suggestions">
-            <Card className="shadow-lg border-0 bg-white hover:shadow-xl transition-all duration-200 cursor-pointer border-2 border-emerald-200 hover:border-emerald-400">
+            <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm hover:shadow-xl transition-all duration-300 cursor-pointer border border-amber-200 hover:border-amber-400 group rounded-2xl">
               <CardHeader className="text-center pb-4">
-                <div className="mx-auto w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mb-4">
-                  <Lightbulb className="h-8 w-8 text-emerald-600" />
+                <div className="mx-auto w-16 h-16 bg-gradient-to-br from-amber-100 to-amber-200 rounded-full flex items-center justify-center mb-4 group-hover:from-amber-200 group-hover:to-amber-300 transition-all duration-300">
+                  <Lightbulb className="h-8 w-8 text-amber-600" />
                 </div>
-                <CardTitle className="text-emerald-600">Suggestions</CardTitle>
+                <CardTitle className="text-amber-700">Suggestions</CardTitle>
                 <CardDescription>Personalized recommendations</CardDescription>
               </CardHeader>
             </Card>
           </Link>
 
           <Link href="/student/exams">
-            <Card className="shadow-lg border-0 bg-white hover:shadow-xl transition-all duration-200 cursor-pointer border-2 border-purple-200 hover:border-purple-400">
+            <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm hover:shadow-xl transition-all duration-300 cursor-pointer border border-blue-200 hover:border-blue-400 group rounded-2xl">
               <CardHeader className="text-center pb-4">
-                <div className="mx-auto w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mb-4">
-                  <FileQuestion className="h-8 w-8 text-purple-600" />
+                <div className="mx-auto w-16 h-16 bg-gradient-to-br from-blue-100 to-blue-200 rounded-full flex items-center justify-center mb-4 group-hover:from-blue-200 group-hover:to-blue-300 transition-all duration-300">
+                  <FileQuestion className="h-8 w-8 text-blue-600" />
                 </div>
-                <CardTitle className="text-purple-600">Exam Materials</CardTitle>
+                <CardTitle className="text-blue-800">Exam Materials</CardTitle>
                 <CardDescription>Past papers & solutions</CardDescription>
               </CardHeader>
             </Card>
           </Link>
 
           <Link href="/student/videos">
-            <Card className="shadow-lg border-0 bg-white hover:shadow-xl transition-all duration-200 cursor-pointer border-2 border-red-200 hover:border-red-400">
+            <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm hover:shadow-xl transition-all duration-300 cursor-pointer border border-slate-200 hover:border-slate-400 group rounded-2xl">
               <CardHeader className="text-center pb-4">
-                <div className="mx-auto w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mb-4">
-                  <Video className="h-8 w-8 text-red-600" />
+                <div className="mx-auto w-16 h-16 bg-gradient-to-br from-slate-100 to-slate-200 rounded-full flex items-center justify-center mb-4 group-hover:from-slate-200 group-hover:to-slate-300 transition-all duration-300">
+                  <Video className="h-8 w-8 text-slate-600" />
                 </div>
-                <CardTitle className="text-red-600">Video Library</CardTitle>
+                <CardTitle className="text-slate-700">Video Library</CardTitle>
                 <CardDescription>Educational content</CardDescription>
               </CardHeader>
             </Card>
           </Link>
 
           <Link href="/student/study-groups">
-            <Card className="shadow-lg border-0 bg-white hover:shadow-xl transition-all duration-200 cursor-pointer border-2 border-orange-200 hover:border-orange-400">
+            <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm hover:shadow-xl transition-all duration-300 cursor-pointer border border-amber-200 hover:border-amber-400 group rounded-2xl">
               <CardHeader className="text-center pb-4">
-                <div className="mx-auto w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mb-4">
-                  <Users className="h-8 w-8 text-orange-600" />
+                <div className="mx-auto w-16 h-16 bg-gradient-to-br from-amber-100 to-amber-200 rounded-full flex items-center justify-center mb-4 group-hover:from-amber-200 group-hover:to-amber-300 transition-all duration-300">
+                  <Users className="h-8 w-8 text-amber-600" />
                 </div>
-                <CardTitle className="text-orange-600">Study Groups</CardTitle>
+                <CardTitle className="text-amber-700">Study Groups</CardTitle>
                 <CardDescription>Collaborative learning</CardDescription>
               </CardHeader>
             </Card>
           </Link>
 
           <Link href="/student/calendar">
-            <Card className="shadow-lg border-0 bg-white hover:shadow-xl transition-all duration-200 cursor-pointer border-2 border-indigo-200 hover:border-indigo-400">
+            <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm hover:shadow-xl transition-all duration-300 cursor-pointer border border-blue-200 hover:border-blue-400 group rounded-2xl">
               <CardHeader className="text-center pb-4">
-                <div className="mx-auto w-16 h-16 bg-indigo-100 rounded-full flex items-center justify-center mb-4">
-                  <Calendar className="h-8 w-8 text-indigo-600" />
+                <div className="mx-auto w-16 h-16 bg-gradient-to-br from-blue-100 to-blue-200 rounded-full flex items-center justify-center mb-4 group-hover:from-blue-200 group-hover:to-blue-300 transition-all duration-300">
+                  <Calendar className="h-8 w-8 text-blue-600" />
                 </div>
-                <CardTitle className="text-indigo-600">Academic Calendar</CardTitle>
+                <CardTitle className="text-blue-800">Academic Calendar</CardTitle>
                 <CardDescription>Important dates</CardDescription>
               </CardHeader>
             </Card>
@@ -298,7 +298,7 @@ export default function StudentDashboard() {
 
         {/* Quick Actions and Recent Activity */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <Card className="shadow-lg border-0 bg-white">
+          <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm border border-blue-100 rounded-2xl">
             <CardHeader>
               <CardTitle className="flex items-center text-gray-900">
                 <TrendingUp className="h-5 w-5 mr-2 text-blue-600" />
@@ -308,7 +308,7 @@ export default function StudentDashboard() {
             <CardContent>
               <div className="space-y-4">
                 {recentActivity && recentActivity.length > 0 ? recentActivity.map((activity) => (
-                  <div key={activity.id} className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
+                  <div key={activity.id} className="flex items-center space-x-3 p-3 bg-gradient-to-r from-blue-50 to-amber-50 rounded-xl border border-blue-100">
                     <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
                     <div className="flex-1">
                       <p className="text-sm font-medium text-gray-900">
@@ -329,38 +329,38 @@ export default function StudentDashboard() {
             </CardContent>
           </Card>
 
-          <Card className="shadow-lg border-0 bg-white">
+          <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm border border-amber-100 rounded-2xl">
             <CardHeader>
               <CardTitle className="flex items-center text-gray-900">
-                <Users className="h-5 w-5 mr-2 text-green-600" />
+                <Users className="h-5 w-5 mr-2 text-amber-600" />
                 Quick Actions
               </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
                 <Link href="/student/browse?filter=recent">
-                  <Button className="w-full justify-start" variant="outline">
+                  <Button className="w-full justify-start border-blue-200 text-blue-800 hover:bg-blue-50 hover:border-blue-300 rounded-xl" variant="outline">
                     <Eye className="h-4 w-4 mr-2" />
                     Recently Viewed
                     <ArrowRight className="h-4 w-4 ml-auto" />
                   </Button>
                 </Link>
                 <Link href={`/student/browse?department=${user?.department_id || 'all'}`}>
-                  <Button className="w-full justify-start" variant="outline">
+                  <Button className="w-full justify-start border-amber-200 text-amber-800 hover:bg-amber-50 hover:border-amber-300 rounded-xl" variant="outline">
                     <BookOpen className="h-4 w-4 mr-2" />
                     Department Materials
                     <ArrowRight className="h-4 w-4 ml-auto" />
                   </Button>
                 </Link>
                 <Link href="/student/suggestions">
-                  <Button className="w-full justify-start" variant="outline">
+                  <Button className="w-full justify-start border-amber-200 text-amber-800 hover:bg-amber-50 hover:border-amber-300 rounded-xl" variant="outline">
                     <Lightbulb className="h-4 w-4 mr-2" />
                     Recommended
                     <ArrowRight className="h-4 w-4 ml-auto" />
                   </Button>
                 </Link>
                 <Link href="/student/exams">
-                  <Button className="w-full justify-start" variant="outline">
+                  <Button className="w-full justify-start border-blue-200 text-blue-800 hover:bg-blue-50 hover:border-blue-300 rounded-xl" variant="outline">
                     <FileQuestion className="h-4 w-4 mr-2" />
                     Exam Materials
                     <ArrowRight className="h-4 w-4 ml-auto" />
@@ -373,10 +373,10 @@ export default function StudentDashboard() {
 
         {/* Recently Viewed Documents */}
         <div className="mt-8">
-          <Card className="shadow-lg border-0 bg-white">
+          <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm border border-slate-200 rounded-2xl">
             <CardHeader>
               <CardTitle className="flex items-center text-gray-900">
-                <Eye className="h-5 w-5 mr-2 text-emerald-600" />
+                <Eye className="h-5 w-5 mr-2 text-slate-600" />
                 Recently Viewed Documents
               </CardTitle>
               <CardDescription>Documents you've recently accessed</CardDescription>
@@ -384,7 +384,7 @@ export default function StudentDashboard() {
             <CardContent>
               <div className="space-y-4">
                 {recentlyViewedDocuments && recentlyViewedDocuments.length > 0 ? recentlyViewedDocuments.map((doc) => (
-                  <div key={doc.id} className="flex items-center space-x-4 p-3 bg-gray-50 rounded-lg">
+                  <div key={doc.id} className="flex items-center space-x-4 p-3 bg-gradient-to-r from-slate-50 to-blue-50 rounded-xl border border-slate-200">
                     <div className="flex-shrink-0">
                       <FileText className="h-5 w-5 text-blue-600" />
                     </div>

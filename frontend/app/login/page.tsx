@@ -130,20 +130,20 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-emerald-50 flex flex-col">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-amber-50 flex flex-col">
       <div className="flex-1 flex items-center justify-center px-4 sm:px-6 lg:px-8 py-8">
         <div className="max-w-md w-full space-y-8">
           {/* Header */}
           <div className="text-center">
-            <Link href="/" className="inline-flex items-center space-x-3 mb-6">
-              <img src="/aastu-university-logo-blue-and-green.png" alt="AASTU Logo" className="h-12 w-12" />
+            <Link href="/" className="inline-flex items-center space-x-4 mb-8">
+              <img src="/aastu-university-logo-blue-and-green.png" alt="AASTU Logo" className="h-14 w-14" />
               <div className="text-left">
-                <h1 className="text-xl font-bold text-gray-900">AASTU Archive</h1>
-                <p className="text-sm text-gray-600">Digital Document System</p>
+                <h1 className="text-2xl font-bold bg-gradient-to-r from-amber-700 to-blue-800 bg-clip-text text-transparent">AASTU</h1>
+                <p className="text-sm text-gray-600 font-medium">Digital Repository</p>
               </div>
             </Link>
-            <h2 className="text-3xl font-bold text-gray-900">Welcome Back</h2>
-            <p className="mt-2 text-gray-600">Sign in to access your account</p>
+            <h2 className="text-4xl font-bold text-gray-900">Welcome Back</h2>
+            <p className="mt-3 text-gray-700 text-lg">Sign in to access your academic resources</p>
           </div>
 
           {/* Success Message */}
@@ -171,7 +171,7 @@ export default function LoginPage() {
           )}
 
           {/* Login Form */}
-          <div className="aastu-card">
+          <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-8 shadow-xl border border-amber-100">
             <form className="space-y-6" onSubmit={handleSubmit}>
               {/* User Type Selection */}
               <div>
@@ -278,19 +278,19 @@ export default function LoginPage() {
               <button
                 type="submit"
                 disabled={isLoading}
-                className="w-full aastu-button-primary flex items-center justify-center space-x-2 py-3 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full bg-gradient-to-r from-amber-600 to-amber-700 text-white hover:from-amber-700 hover:to-amber-800 font-semibold py-4 px-6 rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl flex items-center justify-center space-x-3 disabled:opacity-50 disabled:cursor-not-allowed text-lg"
               >
                 <span>{isLoading ? "Signing In..." : "Sign In"}</span>
-                {!isLoading && <ArrowRight className="h-5 w-5" />}
+                {!isLoading && <ArrowRight className="h-6 w-6" />}
               </button>
             </form>
 
             {/* Sign Up Link */}
-            <div className="mt-6 text-center">
-              <p className="text-sm text-gray-600">
+            <div className="mt-8 text-center">
+              <p className="text-gray-700">
                 Don't have an account?{" "}
-                <Link href="/signup" className="font-medium text-blue-600 hover:text-blue-500">
-                  Sign up here
+                <Link href="/signup" className="font-semibold text-blue-800 hover:text-blue-900 transition-colors duration-200">
+                  Get Started
                 </Link>
               </p>
             </div>
