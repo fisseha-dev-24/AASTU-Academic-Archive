@@ -13,6 +13,9 @@ use App\Models\Feedback;
 use App\Models\Schedule;
 use App\Models\Deadline;
 use App\Models\OfficeHour;
+use App\Models\VideoUpload;
+use App\Models\College;
+use App\Models\DocumentComment;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
@@ -26,18 +29,27 @@ class TeacherController extends Controller
     {
         $user = Auth::user();
         
+        if ($user->role !== 'teacher') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Access denied'
+            ], 403);
+        }
+        
         $stats = [
-            'total_documents' => Document::where('user_id', $user->id)->count(),
-            'pending_approval' => Document::where('user_id', $user->id)->where('status', 'pending')->count(),
-            'approved_documents' => Document::where('user_id', $user->id)->where('status', 'approved')->count(),
-            'rejected_documents' => Document::where('user_id', $user->id)->where('status', 'rejected')->count(),
-            'total_views' => Document::where('user_id', $user->id)->sum('views'),
-            'total_downloads' => Document::where('user_id', $user->id)->sum('downloads'),
-            'monthly_uploads' => Document::where('user_id', $user->id)
+            'totalDocuments' => Document::where('user_id', $user->id)->count(),
+            'totalVideos' => VideoUpload::where('user_id', $user->id)->count(),
+            'pendingApproval' => Document::where('user_id', $user->id)->where('status', 'pending')->count(),
+            'pendingVideoApproval' => VideoUpload::where('user_id', $user->id)->where('status', 'pending')->count(),
+            'approvedDocuments' => Document::where('user_id', $user->id)->where('status', 'approved')->count(),
+            'approvedVideos' => VideoUpload::where('user_id', $user->id)->where('status', 'approved')->count(),
+            'rejectedDocuments' => Document::where('user_id', $user->id)->where('status', 'rejected')->count(),
+            'rejectedVideos' => VideoUpload::where('user_id', $user->id)->where('status', 'rejected')->count(),
+            'monthlyUploads' => Document::where('user_id', $user->id)
                 ->whereMonth('created_at', now()->month)
                 ->count(),
-            'department_documents' => Document::where('user_id', $user->id)
-                ->where('department_id', $user->department_id)
+            'monthlyVideoUploads' => VideoUpload::where('user_id', $user->id)
+                ->whereMonth('created_at', now()->month)
                 ->count(),
         ];
 
@@ -48,11 +60,109 @@ class TeacherController extends Controller
     }
 
     /**
+     * Get teacher dashboard data
+     */
+    public function dashboard(): JsonResponse
+    {
+        $user = Auth::user();
+        
+        if ($user->role !== 'teacher') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Access denied'
+            ], 403);
+        }
+
+        try {
+            // Get user with department
+            $userWithDept = $user->load('department');
+            
+            // Get statistics
+            $stats = [
+                'totalDocuments' => Document::where('user_id', $user->id)->count(),
+                'totalVideos' => VideoUpload::where('user_id', $user->id)->count(),
+                'pendingApproval' => Document::where('user_id', $user->id)->where('status', 'pending')->count(),
+                'pendingVideoApproval' => VideoUpload::where('user_id', $user->id)->where('status', 'pending')->count(),
+                'approvedDocuments' => Document::where('user_id', $user->id)->where('status', 'approved')->count(),
+                'approvedVideos' => VideoUpload::where('user_id', $user->id)->where('status', 'approved')->count(),
+                'rejectedDocuments' => Document::where('user_id', $user->id)->where('status', 'rejected')->count(),
+                'rejectedVideos' => VideoUpload::where('user_id', $user->id)->where('status', 'rejected')->count(),
+                'monthlyUploads' => Document::where('user_id', $user->id)
+                    ->whereMonth('created_at', now()->month)
+                    ->count(),
+                'monthlyVideoUploads' => VideoUpload::where('user_id', $user->id)
+                    ->whereMonth('created_at', now()->month)
+                    ->count(),
+            ];
+
+            // Get recent documents
+            $recentDocuments = Document::where('user_id', $user->id)
+                ->with(['department', 'category'])
+                ->latest()
+                ->take(5)
+                ->get()
+                ->map(function ($document) {
+                    return [
+                        'id' => $document->id,
+                        'title' => $document->title,
+                        'document_type' => $document->document_type,
+                        'status' => $document->status,
+                        'created_at' => $document->created_at->format('Y-m-d H:i:s'),
+                        'views' => $document->views ?? 0,
+                        'downloads' => $document->downloads ?? 0,
+                        'department' => $document->department ? $document->department->name : 'Unknown'
+                    ];
+                });
+
+            // Get recent videos
+            $recentVideos = VideoUpload::where('user_id', $user->id)
+                ->with(['department', 'category'])
+                ->latest()
+                ->take(5)
+                ->get()
+                ->map(function ($video) {
+                    return [
+                        'id' => $video->id,
+                        'title' => $video->title,
+                        'video_platform' => $video->video_platform,
+                        'status' => $video->status,
+                        'created_at' => $video->created_at->format('Y-m-d H:i:s'),
+                        'views' => $video->views,
+                        'department' => $video->department ? $video->department->name : 'Unknown'
+                    ];
+                });
+
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'user' => $userWithDept,
+                    'stats' => $stats,
+                    'recentDocuments' => $recentDocuments,
+                    'recentVideos' => $recentVideos
+                ]
+            ]);
+            
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to load dashboard data'
+            ], 500);
+        }
+    }
+
+    /**
      * Get teacher's documents
      */
     public function getTeacherDocuments(): JsonResponse
     {
         $user = Auth::user();
+        
+        if ($user->role !== 'teacher') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Access denied'
+            ], 403);
+        }
         
         $documents = Document::where('user_id', $user->id)
             ->with(['department', 'category'])
@@ -67,6 +177,10 @@ class TeacherController extends Controller
                     'document_type' => $document->document_type,
                     'status' => $document->status,
                     'file_path' => $document->file_path,
+                    'file_size' => $document->file_size,
+                    'file_type' => $document->file_type,
+                    'year' => $document->year,
+                    'keywords' => $document->keywords,
                     'created_at' => $document->created_at->toISOString(),
                     'updated_at' => $document->updated_at->toISOString(),
                     'views' => $document->views ?? 0,
@@ -135,6 +249,16 @@ class TeacherController extends Controller
      */
     public function uploadDocument(Request $request): JsonResponse
     {
+        $user = Auth::user();
+        
+        // Check if user is a teacher
+        if ($user->role !== 'teacher') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Access denied. Only teachers can upload documents.'
+            ], 403);
+        }
+
         $validator = Validator::make($request->all(), [
             'title' => 'required|string|max:255',
             'description' => 'nullable|string',
@@ -143,8 +267,10 @@ class TeacherController extends Controller
             'category_id' => 'required|exists:categories,id',
             'document_type' => 'required|string|max:50',
             'year' => 'required|digits:4|integer|min:1900|max:' . date('Y'),
+            'semester' => 'required|string|in:1,2,Summer,Winter',
+            'academic_year' => 'required|string|in:1st Year,2nd Year,3rd Year,4th Year,5th Year,Final Year,Graduate,Post Graduate,PhD,General',
             'tags' => 'nullable|string',
-            'file' => 'required|file|mimes:pdf,docx,doc,ppt,pptx,xls,xlsx,txt|max:5120',
+            'file' => 'required|file|mimes:pdf,docx,doc,ppt,pptx,xls,xlsx,txt|max:51200',
         ]);
 
         if ($validator->fails()) {
@@ -156,7 +282,20 @@ class TeacherController extends Controller
         }
 
         try {
-            $user = Auth::user();
+            // Restrict teachers to upload only for their own department
+            if ($request->department_id != $user->department_id) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'You can only upload documents for your own department.'
+                ], 403);
+            }
+            
+            // Debug: Log the received data
+            \Log::info('Document upload request received', [
+                'user_id' => $user->id,
+                'request_data' => $request->all(),
+                'files' => $request->allFiles()
+            ]);
             
             // Store the file
             $file = $request->file('file');
@@ -172,8 +311,14 @@ class TeacherController extends Controller
                 'category_id' => $request->category_id,
                 'document_type' => $request->document_type,
                 'year' => $request->year,
-                'keywords' => $request->tags,
+                'semester' => $request->semester,
+                'academic_year' => $request->academic_year,
+                'keywords' => $request->tags, // Map tags to keywords
                 'file_path' => $filePath,
+                'file_size' => $file->getSize(),
+                'file_type' => $file->getClientMimeType(),
+                'version' => '1.0',
+                'is_featured' => false,
                 'status' => 'pending',
                 'user_id' => $user->id,
             ]);
@@ -198,36 +343,175 @@ class TeacherController extends Controller
             ], 201);
 
         } catch (\Exception $e) {
+            \Log::error('Document upload failed: ' . $e->getMessage(), [
+                'user_id' => Auth::id(),
+                'request_data' => $request->all(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            
             return response()->json([
                 'success' => false,
-                'message' => 'Upload failed: ' . $e->getMessage()
+                'message' => 'Upload failed: ' . $e->getMessage(),
+                'debug' => config('app.debug') ? $e->getTraceAsString() : null
             ], 500);
         }
     }
 
     /**
-     * Get categories for teacher upload
+     * Upload a new video
      */
-    public function getTeacherCategories(): JsonResponse
+    public function uploadVideo(Request $request): JsonResponse
     {
-        $categories = Category::orderBy('name')->get(['id', 'name']);
+        $user = Auth::user();
+        
+        // Check if user is a teacher
+        if ($user->role !== 'teacher') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Access denied. Only teachers can upload videos.'
+            ], 403);
+        }
 
-        return response()->json([
-            'success' => true,
-            'data' => $categories
+        $validator = Validator::make($request->all(), [
+            'title' => 'required|string|max:255',
+            'description' => 'nullable|string',
+            'video_url' => 'required|url',
+            'department_id' => 'required|exists:departments,id',
+            'category_id' => 'nullable|exists:categories,id',
+            'year' => 'required|digits:4|integer|min:1900|max:' . date('Y'),
+            'keywords' => 'nullable|string',
         ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation failed',
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        try {
+            // Restrict teachers to upload only for their own department
+            if ($request->department_id != $user->department_id) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'You can only upload videos for your own department.'
+                ], 403);
+            }
+
+            // Extract video platform and ID
+            $videoPlatform = VideoUpload::getVideoPlatform($request->video_url);
+            $videoId = null;
+            
+            if ($videoPlatform === 'youtube') {
+                $videoId = VideoUpload::extractYouTubeId($request->video_url);
+            } elseif ($videoPlatform === 'vimeo') {
+                $videoId = VideoUpload::extractVimeoId($request->video_url);
+            }
+
+            if (!$videoId) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Invalid video URL. Please provide a valid YouTube or Vimeo URL.'
+                ], 422);
+            }
+
+            // Create the video upload
+            $videoUpload = VideoUpload::create([
+                'title' => $request->title,
+                'description' => $request->description,
+                'video_url' => $request->video_url,
+                'video_platform' => $videoPlatform,
+                'video_id' => $videoId,
+                'department_id' => $request->department_id,
+                'category_id' => $request->category_id,
+                'user_id' => $user->id,
+                'year' => $request->year,
+                'keywords' => $request->keywords,
+                'status' => 'pending',
+            ]);
+
+            // Log the upload
+            AuditLog::create([
+                'user_id' => $user->id,
+                'action' => 'video_upload',
+                'details' => 'Video uploaded: ' . $videoUpload->title,
+                'ip_address' => $request->ip(),
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Video uploaded successfully and sent for review',
+                'data' => [
+                    'id' => $videoUpload->id,
+                    'title' => $videoUpload->title,
+                    'status' => $videoUpload->status,
+                    'video_platform' => $videoUpload->video_platform,
+                ]
+            ], 201);
+
+        } catch (\Exception $e) {
+            \Log::error('Video upload failed: ' . $e->getMessage(), [
+                'user_id' => $user->id,
+                'request_data' => $request->all(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Upload failed: ' . $e->getMessage(),
+                'debug' => config('app.debug') ? $e->getTraceAsString() : null
+            ], 500);
+        }
     }
 
     /**
-     * Get departments for teacher upload
+     * Get teacher's video uploads
      */
-    public function getTeacherDepartments(): JsonResponse
+    public function getTeacherVideos(): JsonResponse
     {
-        $departments = Department::orderBy('name')->get(['id', 'name']);
+        $user = Auth::user();
+        
+        if ($user->role !== 'teacher') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Access denied'
+            ], 403);
+        }
+        
+        $videos = VideoUpload::where('user_id', $user->id)
+            ->with(['department', 'category'])
+            ->orderBy('created_at', 'desc')
+            ->get()
+            ->map(function ($video) {
+                return [
+                    'id' => $video->id,
+                    'title' => $video->title,
+                    'description' => $video->description,
+                    'video_url' => $video->video_url,
+                    'video_platform' => $video->video_platform,
+                    'video_id' => $video->video_id,
+                    'embed_url' => $video->embed_url,
+                    'status' => $video->status,
+                    'rejection_reason' => $video->rejection_reason,
+                    'created_at' => $video->created_at->toISOString(),
+                    'updated_at' => $video->updated_at->toISOString(),
+                    'views' => $video->views,
+                    'likes' => $video->likes,
+                    'department' => $video->department ? [
+                        'id' => $video->department->id,
+                        'name' => $video->department->name
+                    ] : null,
+                    'category' => $video->category ? [
+                        'id' => $video->category->id,
+                        'name' => $video->category->name
+                    ] : null,
+                ];
+            });
 
         return response()->json([
             'success' => true,
-            'data' => $departments
+            'data' => $videos
         ]);
     }
 
@@ -752,5 +1036,419 @@ class TeacherController extends Controller
                 ];
             })
             ->toArray();
+    }
+
+
+    /**
+     * Get teacher analytics data
+     */
+    public function getAnalytics(): JsonResponse
+    {
+        try {
+            $user = Auth::user();
+            
+            if ($user->role !== 'teacher') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Access denied. Teacher privileges required.'
+                ], 403);
+            }
+
+            // Get teacher's documents
+            $documents = Document::where('user_id', $user->id);
+            $totalDocuments = $documents->count();
+            $approvedDocuments = $documents->where('status', 'approved')->count();
+            $pendingDocuments = $documents->where('status', 'pending')->count();
+            $rejectedDocuments = $documents->where('status', 'rejected')->count();
+            
+            // Calculate approval rate
+            $approvalRate = $totalDocuments > 0 ? round(($approvedDocuments / $totalDocuments) * 100, 1) : 0;
+            
+            // Get total views and downloads
+            $totalViews = $documents->sum('views') ?? 0;
+            $totalDownloads = $documents->where('status', 'approved')->sum('downloads') ?? 0;
+            
+            // Get monthly uploads for current year
+            $monthlyUploads = [];
+            for ($i = 1; $i <= 12; $i++) {
+                $monthlyUploads[] = Document::where('user_id', $user->id)
+                    ->whereYear('created_at', date('Y'))
+                    ->whereMonth('created_at', $i)
+                    ->count();
+            }
+            
+            // Get department ranking (simplified - just return current month rank)
+            $departmentRanking = Document::where('user_id', $user->id)
+                ->whereMonth('created_at', now()->month)
+                ->count();
+            
+            // Get top performing documents
+            $topDocuments = Document::where('user_id', $user->id)
+                ->where('status', 'approved')
+                ->orderBy('downloads', 'desc')
+                ->orderBy('views', 'desc')
+                ->take(5)
+                ->get()
+                ->map(function ($doc) {
+                    return [
+                        'id' => $doc->id,
+                        'title' => $doc->title,
+                        'downloads' => $doc->downloads ?? 0,
+                        'views' => $doc->views ?? 0,
+                        'rating' => 4.5 // Placeholder rating
+                    ];
+                });
+
+            // Calculate average response time (simplified)
+            $averageResponseTime = 2; // Placeholder - 2 days average
+
+            $analytics = [
+                'totalDocuments' => $totalDocuments,
+                'approvedDocuments' => $approvedDocuments,
+                'pendingDocuments' => $pendingDocuments,
+                'rejectedDocuments' => $rejectedDocuments,
+                'totalDownloads' => $totalDownloads,
+                'totalViews' => $totalViews,
+                'approvalRate' => $approvalRate,
+                'averageResponseTime' => $averageResponseTime,
+                'monthlyUploads' => $monthlyUploads,
+                'departmentRanking' => $departmentRanking,
+                'topDocuments' => $topDocuments
+            ];
+
+            return response()->json([
+                'success' => true,
+                'data' => $analytics
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to fetch analytics data',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Get categories for teacher upload form
+     */
+    public function getTeacherCategories(): JsonResponse
+    {
+        try {
+            $user = Auth::user();
+            
+            if ($user->role !== 'teacher') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Access denied. Teacher privileges required.'
+                ], 403);
+            }
+
+            $categories = Category::select('id', 'name', 'description')->get();
+
+            return response()->json([
+                'success' => true,
+                'data' => $categories
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to fetch categories',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Get departments for teacher upload form
+     */
+    public function getTeacherDepartments(): JsonResponse
+    {
+        try {
+            $user = Auth::user();
+            
+            if ($user->role !== 'teacher') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Access denied. Teacher privileges required.'
+                ], 403);
+            }
+
+            $departments = Department::select('id', 'name', 'code')->get();
+
+            return response()->json([
+                'success' => true,
+                'data' => $departments
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to fetch departments',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Get teacher profile
+     */
+    public function getTeacherProfile(): JsonResponse
+    {
+        try {
+            $user = Auth::user();
+            
+            if ($user->role !== 'teacher') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Access denied. Teacher privileges required.'
+                ], 403);
+            }
+
+            // Get teacher statistics
+            $totalDocuments = Document::where('user_id', $user->id)->count();
+            $approvedDocuments = Document::where('user_id', $user->id)->where('status', 'approved')->count();
+            $approvalRate = $totalDocuments > 0 ? round(($approvedDocuments / $totalDocuments) * 100, 2) : 0;
+
+            $profile = [
+                'id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
+                'phone' => $user->phone ?? '',
+                'department' => $user->department->name ?? '',
+                'position' => $user->position ?? 'Teacher',
+                'qualification' => $user->qualification ?? '',
+                'specialization' => $user->specialization ?? '',
+                'joinDate' => $user->created_at->format('Y-m-d'),
+                'bio' => $user->bio ?? '',
+                'officeLocation' => $user->office_location ?? '',
+                'officeHours' => $user->office_hours ?? '',
+                'totalDocuments' => $totalDocuments,
+                'approvedDocuments' => $approvedDocuments,
+                'approvalRate' => $approvalRate,
+                'lastActivity' => $user->last_login_at ?? $user->updated_at->format('c')
+            ];
+
+            return response()->json([
+                'success' => true,
+                'data' => $profile
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to fetch teacher profile',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Preview a document (for teachers)
+     */
+    public function previewDocument($documentId)
+    {
+        $user = Auth::user();
+        $document = Document::where('id', $documentId)->first();
+
+        if (!$document) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Document not found'
+            ], 404);
+        }
+
+        // Check if user has permission to view this document (must be the uploader)
+        if ($document->user_id !== $user->id) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Access denied'
+            ], 403);
+        }
+
+        // Track the view
+        $document->increment('views');
+
+        // Log the action
+        AuditLog::create([
+            'user_id' => $user->id,
+            'document_id' => $document->id,
+            'action' => 'document_preview',
+            'details' => "Document previewed by teacher {$user->name}",
+            'ip_address' => request()->ip(),
+        ]);
+
+        // Return the file for preview
+        $filePath = Storage::disk('public')->path($document->file_path);
+        
+        if (!file_exists($filePath)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'File not found'
+            ], 404);
+        }
+
+        return response()->file($filePath);
+    }
+
+    /**
+     * Download a document (for teachers)
+     */
+    public function downloadDocument($documentId)
+    {
+        $user = Auth::user();
+        $document = Document::where('id', $documentId)->first();
+
+        if (!$document) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Document not found'
+            ], 404);
+        }
+
+        // Check if user has permission to download this document (must be the uploader)
+        if ($document->user_id !== $user->id) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Access denied'
+            ], 403);
+        }
+
+        // Track the download
+        $document->increment('downloads');
+
+        // Log the action
+        AuditLog::create([
+            'user_id' => $user->id,
+            'document_id' => $document->id,
+            'action' => 'document_download',
+            'details' => "Document downloaded by teacher {$user->name}",
+            'ip_address' => request()->ip(),
+        ]);
+
+        // Return the file for download
+        $filePath = Storage::disk('public')->path($document->file_path);
+        
+        if (!file_exists($filePath)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'File not found'
+            ], 404);
+        }
+
+        return response()->download($filePath);
+    }
+
+    /**
+     * Update teacher profile
+     */
+    public function updateProfile(Request $request): JsonResponse
+    {
+        $user = Auth::user();
+        
+        if ($user->role !== 'teacher') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Access denied. Only teachers can update their profile.'
+            ], 403);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'phone' => 'nullable|string|max:20',
+            'qualification' => 'nullable|string|max:255',
+            'specialization' => 'nullable|string|max:255',
+            'bio' => 'nullable|string|max:1000',
+            'officeLocation' => 'nullable|string|max:255',
+            'officeHours' => 'nullable|string|max:255',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation failed',
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        try {
+            $user->update([
+                'phone' => $request->phone,
+                'qualification' => $request->qualification,
+                'specialization' => $request->specialization,
+                'bio' => $request->bio,
+                'office_location' => $request->officeLocation,
+                'office_hours' => $request->officeHours,
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Profile updated successfully',
+                'data' => [
+                    'id' => $user->id,
+                    'name' => $user->name,
+                    'email' => $user->email,
+                    'phone' => $user->phone,
+                    'qualification' => $user->qualification,
+                    'specialization' => $user->specialization,
+                    'bio' => $user->bio,
+                    'officeLocation' => $user->office_location,
+                    'officeHours' => $user->office_hours,
+                ]
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error('Profile update failed: ' . $e->getMessage(), [
+                'user_id' => $user->id,
+                'request_data' => $request->all(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Profile update failed: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Get comments for teacher's documents
+     */
+    public function getComments(): JsonResponse
+    {
+        $user = auth()->user();
+        
+        $comments = DocumentComment::where('to_user_id', $user->id)
+            ->with(['document', 'fromUser'])
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        return response()->json([
+            'success' => true,
+            'data' => $comments
+        ]);
+    }
+
+    /**
+     * Mark comment as read
+     */
+    public function markCommentAsRead($commentId): JsonResponse
+    {
+        $user = auth()->user();
+        
+        $comment = DocumentComment::where('id', $commentId)
+            ->where('to_user_id', $user->id)
+            ->first();
+
+        if (!$comment) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Comment not found'
+            ], 404);
+        }
+
+        $comment->update(['is_read' => true]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Comment marked as read'
+        ]);
     }
 }

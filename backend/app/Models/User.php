@@ -16,8 +16,20 @@ class User extends Authenticatable
         'email',
         'password',
         'department_id',
+        'college_id',
         'role',
         'student_id',
+        'is_active',
+        'status',
+        'phone',
+        'address',
+        'bio',
+        'profile_picture',
+        'last_login_at',
+        'qualification',
+        'specialization',
+        'office_location',
+        'office_hours',
     ];
 
     protected $hidden = [
@@ -29,6 +41,12 @@ class User extends Authenticatable
     public function department()
     {
         return $this->belongsTo(Department::class);
+    }
+
+    // A user belongs to one college
+    public function college()
+    {
+        return $this->belongsTo(College::class);
     }
 
     // A user can upload many documents
@@ -74,4 +92,13 @@ class User extends Authenticatable
     {
         return $this->hasOne(Department::class, 'head_id');
     }
+
+    /**
+     * Get the college that the user is dean of (if college dean).
+     */
+    public function headedCollege()
+    {
+        return $this->hasOne(College::class, 'dean_id');
+    }
+
 }

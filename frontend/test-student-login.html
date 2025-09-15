@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Login Test - AASTU Archive</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .test-section {
+            background: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .test-result {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+        .success { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .error { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .info { background-color: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover { background-color: #0056b3; }
+        button:disabled { background-color: #6c757d; cursor: not-allowed; }
+        input {
+            width: 100%;
+            padding: 8px;
+            margin: 5px 0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .credentials {
+            background-color: #e9ecef;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>🧪 Student Login Testing - AASTU Archive</h1>
+    
+    <div class="test-section">
+        <h2>📋 Test Credentials</h2>
+        <div class="credentials">
+            <strong>Student Account:</strong><br>
+            Email: <code>student@test.com</code><br>
+            Password: <code>12121212</code>
+        </div>
+        <div class="credentials">
+            <strong>Teacher Account:</strong><br>
+            Email: <code>teacher@test.com</code><br>
+            Password: <code>12121212</code>
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h2>🔐 Login Test</h2>
+        <div id="login-test-results"></div>
+        <button onclick="testLogin()">Test Student Login</button>
+        <button onclick="testTeacherLogin()">Test Teacher Login</button>
+        <button onclick="testInvalidLogin()">Test Invalid Login</button>
+    </div>
+
+    <div class="test-section">
+        <h2>📊 API Endpoints Test</h2>
+        <div id="api-test-results"></div>
+        <button onclick="testAPIEndpoints()">Test API Endpoints</button>
+    </div>
+
+    <div class="test-section">
+        <h2>🎯 Student Dashboard Test</h2>
+        <div id="dashboard-test-results"></div>
+        <button onclick="testStudentDashboard()">Test Dashboard Access</button>
+    </div>
+
+    <div class="test-section">
+        <h2>📝 Test Results Summary</h2>
+        <div id="summary-results"></div>
+        <button onclick="generateSummary()">Generate Test Summary</button>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:8000/api';
+        const FRONTEND_BASE = 'http://localhost:3000';
+        let testResults = [];
+
+        function addResult(testName, status, message, details = null) {
+            const result = {
+                test: testName,
+                status: status,
+                message: message,
+                details: details,
+                timestamp: new Date().toISOString()
+            };
+            testResults.push(result);
+            return result;
+        }
+
+        function displayResult(containerId, result) {
+            const container = document.getElementById(containerId);
+            const div = document.createElement('div');
+            div.className = `test-result ${result.status}`;
+            div.innerHTML = `
+                <strong>${result.test}</strong><br>
+                ${result.message}<br>
+                ${result.details ? `<small>Details: ${result.details}</small>` : ''}
+                <small style="display: block; margin-top: 5px; opacity: 0.7;">${result.timestamp}</small>
+            `;
+            container.appendChild(div);
+        }
+
+        async function testLogin() {
+            const container = document.getElementById('login-test-results');
+            container.innerHTML = '<div class="test-result info">Testing student login...</div>';
+
+            try {
+                const response = await fetch(`${API_BASE}/login`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        email: 'student@test.com',
+                        password: '12121212'
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (response.ok && data.success) {
+                    const result = addResult('Student Login', 'success', 'Login successful!', `Token: ${data.token ? 'Received' : 'Not received'}`);
+                    displayResult('login-test-results', result);
+                    
+                    // Store token for further tests
+                    if (data.token) {
+                        localStorage.setItem('auth_token', data.token);
+                        localStorage.setItem('user_info', JSON.stringify(data.user));
+                    }
+                } else {
+                    const result = addResult('Student Login', 'error', 'Login failed', data.message || 'Unknown error');
+                    displayResult('login-test-results', result);
+                }
+            } catch (error) {
+                const result = addResult('Student Login', 'error', 'Network error', error.message);
+                displayResult('login-test-results', result);
+            }
+        }
+
+        async function testTeacherLogin() {
+            const container = document.getElementById('login-test-results');
+            
+            try {
+                const response = await fetch(`${API_BASE}/login`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        email: 'teacher@test.com',
+                        password: '12121212'
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (response.ok && data.success) {
+                    const result = addResult('Teacher Login', 'success', 'Teacher login successful!', `Role: ${data.user?.role}`);
+                    displayResult('login-test-results', result);
+                } else {
+                    const result = addResult('Teacher Login', 'error', 'Teacher login failed', data.message || 'Unknown error');
+                    displayResult('login-test-results', result);
+                }
+            } catch (error) {
+                const result = addResult('Teacher Login', 'error', 'Network error', error.message);
+                displayResult('login-test-results', result);
+            }
+        }
+
+        async function testInvalidLogin() {
+            const container = document.getElementById('login-test-results');
+            
+            try {
+                const response = await fetch(`${API_BASE}/login`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        email: 'invalid@test.com',
+                        password: 'wrongpassword'
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (!response.ok && !data.success) {
+                    const result = addResult('Invalid Login', 'success', 'Invalid login correctly rejected', data.message);
+                    displayResult('login-test-results', result);
+                } else {
+                    const result = addResult('Invalid Login', 'error', 'Invalid login was accepted (security issue!)', 'This should not happen');
+                    displayResult('login-test-results', result);
+                }
+            } catch (error) {
+                const result = addResult('Invalid Login', 'error', 'Network error', error.message);
+                displayResult('login-test-results', result);
+            }
+        }
+
+        async function testAPIEndpoints() {
+            const container = document.getElementById('api-test-results');
+            container.innerHTML = '<div class="test-result info">Testing API endpoints...</div>';
+
+            const token = localStorage.getItem('auth_token');
+            if (!token) {
+                const result = addResult('API Endpoints', 'error', 'No auth token available', 'Please login first');
+                displayResult('api-test-results', result);
+                return;
+            }
+
+            const endpoints = [
+                { name: 'User Profile', url: '/user/profile' },
+                { name: 'Student Stats', url: '/student/stats' },
+                { name: 'Recent Activity', url: '/student/recent-activity' },
+                { name: 'Recently Viewed', url: '/student/recently-viewed' },
+                { name: 'Documents', url: '/documents' }
+            ];
+
+            for (const endpoint of endpoints) {
+                try {
+                    const response = await fetch(`${API_BASE}${endpoint.url}`, {
+                        headers: {
+                            'Authorization': `Bearer ${token}`,
+                            'Accept': 'application/json'
+                        }
+                    });
+
+                    const data = await response.json();
+                    
+                    if (response.ok) {
+                        const result = addResult(endpoint.name, 'success', 'Endpoint accessible', `Status: ${response.status}`);
+                        displayResult('api-test-results', result);
+                    } else {
+                        const result = addResult(endpoint.name, 'error', 'Endpoint failed', `Status: ${response.status}, Message: ${data.message || 'Unknown error'}`);
+                        displayResult('api-test-results', result);
+                    }
+                } catch (error) {
+                    const result = addResult(endpoint.name, 'error', 'Network error', error.message);
+                    displayResult('api-test-results', result);
+                }
+            }
+        }
+
+        async function testStudentDashboard() {
+            const container = document.getElementById('dashboard-test-results');
+            container.innerHTML = '<div class="test-result info">Testing student dashboard access...</div>';
+
+            const token = localStorage.getItem('auth_token');
+            if (!token) {
+                const result = addResult('Dashboard Access', 'error', 'No auth token available', 'Please login first');
+                displayResult('dashboard-test-results', result);
+                return;
+            }
+
+            try {
+                // Test if we can access the dashboard page
+                const response = await fetch(`${FRONTEND_BASE}/student/dashboard`, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Accept': 'text/html'
+                    }
+                });
+
+                if (response.ok) {
+                    const result = addResult('Dashboard Access', 'success', 'Dashboard page accessible', `Status: ${response.status}`);
+                    displayResult('dashboard-test-results', result);
+                } else {
+                    const result = addResult('Dashboard Access', 'error', 'Dashboard page not accessible', `Status: ${response.status}`);
+                    displayResult('dashboard-test-results', result);
+                }
+            } catch (error) {
+                const result = addResult('Dashboard Access', 'error', 'Network error', error.message);
+                displayResult('dashboard-test-results', result);
+            }
+        }
+
+        function generateSummary() {
+            const container = document.getElementById('summary-results');
+            container.innerHTML = '';
+
+            const totalTests = testResults.length;
+            const successfulTests = testResults.filter(r => r.status === 'success').length;
+            const failedTests = testResults.filter(r => r.status === 'error').length;
+
+            const summaryDiv = document.createElement('div');
+            summaryDiv.className = 'test-result info';
+            summaryDiv.innerHTML = `
+                <h3>📊 Test Summary</h3>
+                <p><strong>Total Tests:</strong> ${totalTests}</p>
+                <p><strong>Successful:</strong> ${successfulTests}</p>
+                <p><strong>Failed:</strong> ${failedTests}</p>
+                <p><strong>Success Rate:</strong> ${totalTests > 0 ? Math.round((successfulTests / totalTests) * 100) : 0}%</p>
+            `;
+            container.appendChild(summaryDiv);
+
+            // Show failed tests
+            const failedTestsList = testResults.filter(r => r.status === 'error');
+            if (failedTestsList.length > 0) {
+                const failedDiv = document.createElement('div');
+                failedDiv.className = 'test-result error';
+                failedDiv.innerHTML = `
+                    <h4>❌ Failed Tests:</h4>
+                    <ul>
+                        ${failedTestsList.map(test => `<li>${test.test}: ${test.message}</li>`).join('')}
+                    </ul>
+                `;
+                container.appendChild(failedDiv);
+            }
+
+            // Show successful tests
+            const successfulTestsList = testResults.filter(r => r.status === 'success');
+            if (successfulTestsList.length > 0) {
+                const successDiv = document.createElement('div');
+                successDiv.className = 'test-result success';
+                successDiv.innerHTML = `
+                    <h4>✅ Successful Tests:</h4>
+                    <ul>
+                        ${successfulTestsList.map(test => `<li>${test.test}: ${test.message}</li>`).join('')}
+                    </ul>
+                `;
+                container.appendChild(successDiv);
+            }
+        }
+
+        // Auto-run basic tests on page load
+        window.onload = function() {
+            console.log('🧪 Student Login Test Page Loaded');
+            console.log('📋 Test Credentials:');
+            console.log('   Student: student@test.com / 12121212');
+            console.log('   Teacher: teacher@test.com / 12121212');
+        };
+    </script>
+</body>
+</html>

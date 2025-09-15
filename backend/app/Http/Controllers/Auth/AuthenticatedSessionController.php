@@ -128,4 +128,37 @@ class AuthenticatedSessionController extends Controller
             default => '/dashboard',
         };
     }
+
+    /**
+     * Handle API token refresh request
+     */
+    public function apiRefresh(Request $request): JsonResponse
+    {
+        try {
+            $user = $request->user();
+            
+            if (!$user) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'User not authenticated'
+                ], 401);
+            }
+            
+            // Revoke old token and create new one
+            $user->currentAccessToken()->delete();
+            $token = $user->createToken('auth-token')->plainTextToken;
+            
+            return response()->json([
+                'success' => true,
+                'token' => $token,
+                'expires_at' => now()->addMinutes(60)->toISOString()
+            ]);
+            
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Token refresh failed'
+            ], 500);
+        }
+    }
 }

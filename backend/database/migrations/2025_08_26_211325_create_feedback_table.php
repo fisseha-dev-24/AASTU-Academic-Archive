@@ -13,19 +13,15 @@ return new class extends Migration
     {
         Schema::create('feedback', function (Blueprint $table) {
             $table->id();
-            $table->unsignedBigInteger('document_id');
-            $table->unsignedBigInteger('student_id');
-            $table->unsignedBigInteger('teacher_id');
+            $table->unsignedBigInteger('document_id')->index();
+            $table->unsignedBigInteger('student_id')->index();
+            $table->unsignedBigInteger('teacher_id')->index();
             $table->string('course_name');
             $table->integer('rating'); // 1-5 stars
             $table->text('comment');
             $table->boolean('is_helpful')->default(false);
             $table->timestamps();
 
-            $table->foreign('document_id')->references('id')->on('documents')->onDelete('cascade');
-            $table->foreign('student_id')->references('id')->on('users')->onDelete('cascade');
-            $table->foreign('teacher_id')->references('id')->on('users')->onDelete('cascade');
-            
             // Prevent duplicate feedback from same student on same document
             $table->unique(['document_id', 'student_id']);
         });

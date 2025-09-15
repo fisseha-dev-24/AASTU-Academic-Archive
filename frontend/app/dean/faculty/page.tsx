@@ -1,6 +1,13 @@
 "use client"
 
+"use client"
+
+"use client"
+
+"use client"
+
 import { useState, useEffect } from "react"
+import { useSearchParams } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -41,7 +48,9 @@ interface Faculty {
   id: number
   name: string
   email: string
+  role: string
   department: string
+  department_id: string
   position: string
   phone: string
   joinDate: string
@@ -54,17 +63,27 @@ interface Faculty {
 }
 
 export default function DeanFaculty() {
+  const searchParams = useSearchParams()
   const [user, setUser] = useState<User | null>(null)
   const [searchTerm, setSearchTerm] = useState("")
   const [filterDepartment, setFilterDepartment] = useState("all")
   const [faculty, setFaculty] = useState<Faculty[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [departments, setDepartments] = useState<{id: string, name: string}[]>([])
 
   useEffect(() => {
     loadUserData()
     loadFacultyData()
-  }, [])
+    
+    // Check for department filter from URL
+    const deptId = searchParams.get('dept')
+    if (deptId) {
+      // Set the filter to the specific department
+      // We'll need to get the department name from the faculty data
+      setFilterDepartment(deptId)
+    }
+  }, [searchParams])
 
   const loadUserData = () => {
     const userInfo = localStorage.getItem('user_info')
@@ -89,10 +108,12 @@ export default function DeanFaculty() {
           id: member.id,
           name: member.name,
           email: member.email,
+          role: member.role,
           department: member.department,
-          position: 'Faculty Member', // Default position since API doesn't provide it
+          department_id: member.department_id || 'unknown', // Add department ID for filtering
+          position: member.role === 'department_head' ? 'Department Head' : 'Teacher',
           phone: '+251 XXX XXX XXX', // Default phone since API doesn't provide it
-          joinDate: member.created_at || 'Unknown',
+          joinDate: member.created_at ? new Date(member.created_at).toLocaleDateString() : 'Unknown',
           documentsUploaded: member.total_uploads,
           status: member.approval_rate > 0 ? 'active' : 'inactive',
           total_uploads: member.total_uploads,
@@ -101,6 +122,19 @@ export default function DeanFaculty() {
           last_activity: member.last_activity
         }))
         setFaculty(formattedFaculty)
+        
+        // Extract unique departments for filter dropdown
+        const departmentSet = new Set<string>()
+        const uniqueDepartments: {id: string, name: string}[] = []
+        
+        formattedFaculty.forEach((member: Faculty) => {
+          if (member.department && member.department_id && !departmentSet.has(member.department)) {
+            departmentSet.add(member.department)
+            uniqueDepartments.push({id: member.department_id, name: member.department})
+          }
+        })
+        
+        setDepartments(uniqueDepartments)
       } else {
         setFaculty([])
         setError('No faculty data found')
@@ -144,7 +178,7 @@ export default function DeanFaculty() {
     const matchesSearch = member.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          member.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          member.department.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesDepartment = filterDepartment === "all" || member.department === filterDepartment
+    const matchesDepartment = filterDepartment === "all" || member.department_id === filterDepartment
     
     return matchesSearch && matchesDepartment
   })
@@ -193,11 +227,11 @@ export default function DeanFaculty() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Departments</SelectItem>
-                  <SelectItem value="Computer Science">Computer Science</SelectItem>
-                  <SelectItem value="Electrical Engineering">Electrical Engineering</SelectItem>
-                  <SelectItem value="Mechanical Engineering">Mechanical Engineering</SelectItem>
-                  <SelectItem value="Civil Engineering">Civil Engineering</SelectItem>
-                  <SelectItem value="Software Engineering">Software Engineering</SelectItem>
+                  {departments.map((dept) => (
+                    <SelectItem key={dept.id} value={dept.id}>
+                      {dept.name}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -244,6 +278,7 @@ export default function DeanFaculty() {
                           <div>
                             <h3 className="text-lg font-semibold text-gray-900">{member.name}</h3>
                             <p className="text-sm text-gray-600">{member.email}</p>
+                            <p className="text-xs text-blue-600 font-medium">{member.position}</p>
                           </div>
                           <div className="flex items-center space-x-2">
                             {getStatusBadge(member.status)}

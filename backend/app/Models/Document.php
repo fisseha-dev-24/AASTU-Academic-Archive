@@ -8,16 +8,27 @@ class Document extends Model
 {
     protected $fillable = [
         'title',
+        'description',
         'author',
         'department_id',
         'user_id',
         'category_id',
         'year',
+        'semester',
+        'academic_year',
         'supervisor',
         'document_type',
+        'keywords',
         'tags',
         'file_path',
-        'status'
+        'file_size',
+        'file_type',
+        'version',
+        'is_featured',
+        'expires_at',
+        'status',
+        'views',
+        'downloads'
     ];
 
     // Document belongs to uploader (descriptive)

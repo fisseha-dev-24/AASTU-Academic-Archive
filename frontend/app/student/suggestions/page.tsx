@@ -1,5 +1,11 @@
 "use client"
 
+"use client"
+
+"use client"
+
+"use client"
+
 import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -7,8 +13,6 @@ import { Badge } from "@/components/ui/badge"
 import { ArrowLeft, Lightbulb, Star, TrendingUp, Clock, Download, Eye, BookOpen } from "lucide-react"
 import Link from "next/link"
 import { apiClient } from "@/lib/api"
-import PageHeader from "@/components/PageHeader"
-import Footer from "@/components/Footer"
 import { toast } from "sonner"
 
 interface User {
@@ -91,16 +95,8 @@ export default function SuggestionsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <PageHeader
-        title="Document Suggestions"
-        subtitle="AI-powered recommendations"
-        backUrl="/student/dashboard"
-        user={user}
-      />
-
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div className="p-6">
+      <div className="max-w-7xl mx-auto">
         <div className="mb-8">
           <div className="flex items-center mb-4">
             <Lightbulb className="h-8 w-8 text-emerald-600 mr-3" />

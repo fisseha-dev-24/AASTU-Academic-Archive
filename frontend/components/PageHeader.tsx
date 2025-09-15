@@ -1,5 +1,7 @@
 "use client"
 
+"use client"
+
 import Link from "next/link"
 import { ArrowLeft } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -14,7 +16,7 @@ interface PageHeaderProps {
     name: string
     email: string
     role: string
-    department?: string
+    department?: string | { name: string }
     student_id?: string
     department_id?: number
   } | null
@@ -63,7 +65,6 @@ export default function PageHeader({
           
           <div className="flex items-center space-x-4">
             {children}
-            <UserProfileDropdown user={user} />
           </div>
         </div>
       </div>

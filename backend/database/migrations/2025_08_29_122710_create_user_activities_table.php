@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('user_activities', function (Blueprint $table) {
             $table->id();
-            $table->unsignedBigInteger('user_id');
+            $table->unsignedBigInteger('user_id')->index();
             $table->enum('action', ['login', 'logout', 'session_start', 'session_end', 'password_change', 'profile_update']);
             $table->string('ip_address')->nullable();
             $table->string('user_agent')->nullable();
@@ -23,7 +23,7 @@ return new class extends Migration
             $table->text('failure_reason')->nullable();
             $table->timestamp('created_at')->useCurrent();
             
-            $table->foreign('user_id')->references('id')->on('users')->onDelete('cascade');
+            
             
             $table->index(['user_id', 'action', 'created_at']);
             $table->index(['ip_address', 'created_at']);

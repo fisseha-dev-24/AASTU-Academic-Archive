@@ -59,7 +59,8 @@ return new class extends Migration
             }
             if (!Schema::hasColumn('departments', 'head_id')) {
                 $table->unsignedBigInteger('head_id')->nullable()->after('description');
-                $table->foreign('head_id')->references('id')->on('users')->onDelete('set null');
+                // FK removed for compatibility across environments
+                $table->index('head_id');
             }
             if (!Schema::hasColumn('departments', 'is_active')) {
                 $table->boolean('is_active')->default(true)->after('head_id');

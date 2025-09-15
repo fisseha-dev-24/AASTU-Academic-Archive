@@ -16,7 +16,8 @@ return new class extends Migration
         $table->string('email')->unique();
         $table->timestamp('email_verified_at')->nullable();
         $table->string('password');
-        $table->foreignId('department_id')->nullable()->constrained()->onDelete('set null');
+        // Use a simple nullable index instead of FK to avoid MySQL FK issues across environments
+        $table->unsignedBigInteger('department_id')->nullable()->index();
         $table->rememberToken();
         $table->timestamps();
     });

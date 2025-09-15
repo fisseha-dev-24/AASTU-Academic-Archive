@@ -4,11 +4,8 @@ import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { ArrowLeft, Calendar, Clock, MapPin, Bell, Plus, ChevronLeft, ChevronRight } from "lucide-react"
+import { ArrowLeft, Calendar, Eye, Download, Clock, MapPin, Star, CheckCircle, XCircle } from "lucide-react"
 import Link from "next/link"
-import { apiClient } from "@/lib/api"
-import PageHeader from "@/components/PageHeader"
-import Footer from "@/components/Footer"
 
 interface User {
   id: number
@@ -20,21 +17,9 @@ interface User {
   department_id?: number
 }
 
-interface CalendarEvent {
-  id: number
-  title: string
-  date: string
-  time: string
-  location: string
-  type: string
-  course: string
-}
-
 export default function AcademicCalendarPage() {
   const [user, setUser] = useState<User | null>(null)
-  const [events, setEvents] = useState<CalendarEvent[]>([])
-  const [loading, setLoading] = useState(true)
-  const [currentMonth, setCurrentMonth] = useState(new Date())
+  const [loading, setLoading] = useState(false)
 
   useEffect(() => {
     // Load user info from localStorage
@@ -47,224 +32,166 @@ export default function AcademicCalendarPage() {
         console.error('Error parsing user info:', error)
       }
     }
-    
-    loadCalendarEvents()
   }, [])
 
-  const loadCalendarEvents = async () => {
-    setLoading(true)
-    try {
-      const response = await apiClient.getCalendarEvents()
-      
-      if (response.success && response.data) {
-        setEvents(response.data)
-      }
-    } catch (error) {
-      console.error('Error loading calendar events:', error)
-      setEvents([])
-    } finally {
-      setLoading(false)
-    }
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading academic calendar...</p>
+        </div>
+      </div>
+    )
   }
-
-  const getEventColor = (type: string) => {
-    switch (type) {
-      case "exam":
-        return "bg-red-100 text-red-800 border-red-200"
-      case "assignment":
-        return "bg-blue-100 text-blue-800 border-blue-200"
-      case "meeting":
-        return "bg-green-100 text-green-800 border-green-200"
-      default:
-        return "bg-gray-100 text-gray-800 border-gray-200"
-    }
-  }
-
-  const getEventIcon = (type: string) => {
-    switch (type) {
-      case "exam":
-        return "📝"
-      case "assignment":
-        return "📚"
-      case "meeting":
-        return "👥"
-      default:
-        return "📅"
-    }
-  }
-
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString)
-    return date.toLocaleDateString('en-US', { 
-      weekday: 'short', 
-      month: 'short', 
-      day: 'numeric' 
-    })
-  }
-
-  const sortedEvents = events.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
       {/* Header */}
-      <PageHeader
-        title="Academic Calendar"
-        subtitle="Important dates and deadlines"
-        backUrl="/student/dashboard"
-        user={user}
-      />
-
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Calendar View */}
-          <div className="lg:col-span-2">
-            <Card>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle className="flex items-center">
-                    <Calendar className="h-5 w-5  text-indigo-600" />
-                    {currentMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
-                  </CardTitle>
-                  <div className="flex items-center space-x-2">
-                    <Button variant="outline" size="sm" onClick={() => {
-                      setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1))
-                    }}>
-                      <ChevronLeft className="h-4 w-4" />
-                    </Button>
-                    <Button variant="outline" size="sm" onClick={() => {
-                      setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1))
-                    }}>
-                      <ChevronRight className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent>
-                {loading ? (
-                  <div className="text-center py-12">
-                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto"></div>
-                    <p className="mt-4 text-gray-600">Loading calendar...</p>
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    {sortedEvents.length > 0 ? (
-                      sortedEvents.map((event) => (
-                        <div key={event.id} className="flex items-center space-x-4 p-4 border border-gray-200 rounded-lg">
-                          <div className="text-2xl">{getEventIcon(event.type)}</div>
-                          <div className="flex-1">
-                            <h4 className="font-medium text-gray-900">{event.title}</h4>
-                            <div className="flex items-center space-x-4 text-sm text-gray-500 mt-1">
-                              <div className="flex items-center">
-                                <Calendar className="h-4 w-4 mr-1" />
-                                {formatDate(event.date)}
-                              </div>
-                              <div className="flex items-center">
-                                <Clock className="h-4 w-4 mr-1" />
-                                {event.time}
-                              </div>
-                              <div className="flex items-center">
-                                <MapPin className="h-4 w-4 mr-1" />
-                                {event.location}
-                              </div>
-                            </div>
-                          </div>
-                          <Badge className={getEventColor(event.type)}>
-                            {event.type}
-                          </Badge>
-                        </div>
-                      ))
-                    ) : (
-                      <div className="text-center py-8">
-                        <Calendar className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-                        <p className="text-gray-500">No events scheduled for this month</p>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Sidebar */}
-          <div className="space-y-6">
-            {/* Upcoming Events */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <Bell className="h-5 w-5  text-orange-600" />
-                  Upcoming Events
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {loading ? (
-                  <div className="text-center py-4">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-600 mx-auto"></div>
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    {sortedEvents.slice(0, 5).map((event) => (
-                      <div key={event.id} className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
-                        <div className="text-lg">{getEventIcon(event.type)}</div>
-                        <div className="flex-1">
-                          <h5 className="font-medium text-sm text-gray-900">{event.title}</h5>
-                          <p className="text-xs text-gray-500">{formatDate(event.date)} at {event.time}</p>
-                        </div>
-                        <Badge className={`text-xs ${getEventColor(event.type)}`}>
-                          {event.type}
-                        </Badge>
-                      </div>
-                    ))}
-                    {sortedEvents.length === 0 && (
-                      <p className="text-sm text-gray-500 text-center py-4">No upcoming events</p>
-                    )}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Quick Actions */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Quick Actions</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <Button variant="outline" className="w-full justify-start">
-                  <Plus className="h-4 w-4 " />
-                  Add New Event
+      <div className="bg-white/80 backdrop-blur-sm shadow-sm border-b">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-4">
+              <Link href="/student/dashboard">
+                <Button variant="ghost" size="sm" className="p-2">
+                  <ArrowLeft className="h-4 w-4" />
                 </Button>
-                <Button variant="outline" className="w-full justify-start">
-                  <Calendar className="h-4 w-4 " />
-                  Export Calendar
-                </Button>
-                <Button variant="outline" className="w-full justify-start">
-                  <Bell className="h-4 w-4 " />
-                  Notification Settings
-                </Button>
-              </CardContent>
-            </Card>
-
-            {/* Event Types Legend */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Event Types</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                <div className="flex items-center space-x-2">
-                  <Badge className="bg-red-100 text-red-800 border-red-200">Exam</Badge>
-                  <span className="text-sm text-gray-600">Tests and examinations</span>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Badge className="bg-blue-100 text-blue-800 border-blue-200">Assignment</Badge>
-                  <span className="text-sm text-gray-600">Homework and projects</span>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Badge className="bg-green-100 text-green-800 border-green-200">Meeting</Badge>
-                  <span className="text-sm text-gray-600">Study groups and meetings</span>
-                </div>
-              </CardContent>
-            </Card>
+              </Link>
+              <div>
+                <h1 className="text-3xl font-bold text-gray-900">Academic Calendar</h1>
+                <p className="text-gray-600 mt-1">View and download the academic calendar</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <Badge variant="secondary" className="text-sm">
+                Academic Year 2024-2025
+              </Badge>
+            </div>
           </div>
         </div>
+      </div>
+
+      {/* Academic Calendar Section */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-xl">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Calendar className="w-6 h-6 text-blue-600" />
+              Academic Calendar 2024-2025
+            </CardTitle>
+            <p className="text-gray-600">View the complete academic calendar for the current academic year</p>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-6">
+              {/* Calendar Preview */}
+              <div className="bg-gray-50 rounded-lg p-6 border-2 border-dashed border-gray-300">
+                <div className="text-center">
+                  <Calendar className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">Academic Calendar PDF</h3>
+                  <p className="text-gray-600 mb-4">
+                    The academic calendar contains important dates including semester start/end dates, 
+                    exam periods, holidays, and registration deadlines.
+                  </p>
+                  
+                  {/* Calendar Info */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                    <div className="bg-white p-4 rounded-lg border">
+                      <h4 className="font-semibold text-gray-900 mb-2">Fall Semester</h4>
+                      <p className="text-sm text-gray-600">September 2 - December 20, 2024</p>
+                    </div>
+                    <div className="bg-white p-4 rounded-lg border">
+                      <h4 className="font-semibold text-gray-900 mb-2">Spring Semester</h4>
+                      <p className="text-sm text-gray-600">January 13 - May 2, 2025</p>
+                    </div>
+                    <div className="bg-white p-4 rounded-lg border">
+                      <h4 className="font-semibold text-gray-900 mb-2">Summer Session</h4>
+                      <p className="text-sm text-gray-600">May 19 - July 11, 2025</p>
+                    </div>
+                  </div>
+                  
+                  {/* Action Buttons */}
+                  <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                    <Button 
+                      size="lg" 
+                      className="bg-blue-600 hover:bg-blue-700 text-white"
+                      onClick={() => {
+                        // Open calendar in new tab
+                        window.open('/academic-calendar-2024-2025.pdf', '_blank')
+                      }}
+                    >
+                      <Eye className="w-5 h-5 mr-2" />
+                      View Calendar
+                    </Button>
+                    <Button 
+                      size="lg" 
+                      variant="outline"
+                      className="border-blue-300 text-blue-700 hover:bg-blue-50"
+                      onClick={() => {
+                        // Download calendar
+                        const link = document.createElement('a')
+                        link.href = '/academic-calendar-2024-2025.pdf'
+                        link.download = 'AASTU-Academic-Calendar-2024-2025.pdf'
+                        document.body.appendChild(link)
+                        link.click()
+                        document.body.removeChild(link)
+                      }}
+                    >
+                      <Download className="w-5 h-5 mr-2" />
+                      Download PDF
+                    </Button>
+                  </div>
+                </div>
+              </div>
+              
+              {/* Important Dates */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <h4 className="font-semibold text-gray-900 mb-4">Important Dates - Fall 2024</h4>
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-center p-3 bg-blue-50 rounded-lg">
+                      <span className="text-sm font-medium">Registration Opens</span>
+                      <span className="text-sm text-gray-600">August 15, 2024</span>
+                    </div>
+                    <div className="flex justify-between items-center p-3 bg-green-50 rounded-lg">
+                      <span className="text-sm font-medium">Classes Begin</span>
+                      <span className="text-sm text-gray-600">September 2, 2024</span>
+                    </div>
+                    <div className="flex justify-between items-center p-3 bg-yellow-50 rounded-lg">
+                      <span className="text-sm font-medium">Midterm Exams</span>
+                      <span className="text-sm text-gray-600">October 21-25, 2024</span>
+                    </div>
+                    <div className="flex justify-between items-center p-3 bg-red-50 rounded-lg">
+                      <span className="text-sm font-medium">Final Exams</span>
+                      <span className="text-sm text-gray-600">December 16-20, 2024</span>
+                    </div>
+                  </div>
+                </div>
+                
+                <div>
+                  <h4 className="font-semibold text-gray-900 mb-4">Important Dates - Spring 2025</h4>
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-center p-3 bg-blue-50 rounded-lg">
+                      <span className="text-sm font-medium">Registration Opens</span>
+                      <span className="text-sm text-gray-600">December 15, 2024</span>
+                    </div>
+                    <div className="flex justify-between items-center p-3 bg-green-50 rounded-lg">
+                      <span className="text-sm font-medium">Classes Begin</span>
+                      <span className="text-sm text-gray-600">January 13, 2025</span>
+                    </div>
+                    <div className="flex justify-between items-center p-3 bg-yellow-50 rounded-lg">
+                      <span className="text-sm font-medium">Midterm Exams</span>
+                      <span className="text-sm text-gray-600">March 3-7, 2025</span>
+                    </div>
+                    <div className="flex justify-between items-center p-3 bg-red-50 rounded-lg">
+                      <span className="text-sm font-medium">Final Exams</span>
+                      <span className="text-sm text-gray-600">April 28 - May 2, 2025</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   )

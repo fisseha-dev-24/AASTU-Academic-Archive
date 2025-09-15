@@ -1,5 +1,7 @@
 "use client"
 
+"use client"
+
 import { useState } from "react"
 import { useAuth } from "@/contexts/AuthContext"
 import { useRouter } from "next/navigation"
@@ -21,7 +23,7 @@ interface UserProfileDropdownProps {
     name: string
     email: string
     role: string
-    department?: string
+    department?: string | { name: string }
     student_id?: string
     department_id?: number
   } | null
@@ -90,11 +92,17 @@ export default function UserProfileDropdown({ user }: UserProfileDropdownProps) 
           </div>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
-        <DropdownMenuItem className="cursor-pointer hover:bg-blue-50 focus:bg-blue-50 text-gray-700 hover:text-blue-700">
+        <DropdownMenuItem 
+          onClick={() => router.push(`/${user.role}/profile`)}
+          className="cursor-pointer hover:bg-blue-50 focus:bg-blue-50 text-gray-700 hover:text-blue-700"
+        >
           <User className="mr-2 h-4 w-4" />
           <span>Profile</span>
         </DropdownMenuItem>
-        <DropdownMenuItem className="cursor-pointer hover:bg-blue-50 focus:bg-blue-50 text-gray-700 hover:text-blue-700">
+        <DropdownMenuItem 
+          onClick={() => router.push(`/${user.role}/settings`)}
+          className="cursor-pointer hover:bg-blue-50 focus:bg-blue-50 text-gray-700 hover:text-blue-700"
+        >
           <Settings className="mr-2 h-4 w-4" />
           <span>Settings</span>
         </DropdownMenuItem>

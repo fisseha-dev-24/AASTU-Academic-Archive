@@ -1,5 +1,11 @@
 "use client"
 
+"use client"
+
+"use client"
+
+"use client"
+
 import { useState, useEffect } from "react"
 import Link from "next/link"
 import { ArrowLeft, Star, MessageSquare, TrendingUp, Search, Upload } from "lucide-react"

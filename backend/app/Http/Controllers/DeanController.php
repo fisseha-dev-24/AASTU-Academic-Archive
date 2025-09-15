@@ -11,6 +11,8 @@ use App\Models\Document;
 use App\Models\Department;
 use App\Models\AuditLog;
 use App\Models\DocumentReview;
+use App\Models\College;
+use App\Models\VideoUpload;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 
@@ -32,20 +34,47 @@ class DeanController extends Controller
                 ], 403);
             }
 
-            // Get college-level statistics
+            // Get the dean's college
+            $college = College::where('dean_id', $user->id)->first();
+            if (!$college) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'College not assigned to this dean'
+                ], 400);
+            }
+
+            // Get college-level statistics (restricted to dean's college only)
+            $collegeDepartmentIds = Department::where('college_id', $college->id)->pluck('id');
+            
             $stats = [
-                'total_departments' => Department::count(),
-                'total_teachers' => User::where('role', 'teacher')->count(),
-                'total_students' => User::where('role', 'student')->count(),
-                'total_documents' => Document::count(),
-                'pending_approvals' => Document::where('status', 'pending')->count(),
-                'approved_this_month' => Document::where('status', 'approved')
+                'college_name' => $college->name,
+                'college_code' => $college->code,
+                'total_departments' => $collegeDepartmentIds->count(),
+                'total_teachers' => User::whereIn('role', ['teacher', 'department_head'])->where('college_id', $college->id)->count(),
+                'total_students' => User::where('role', 'student')->where('college_id', $college->id)->count(),
+                'total_documents' => Document::whereIn('department_id', $collegeDepartmentIds)->count(),
+                'total_videos' => VideoUpload::whereIn('department_id', $collegeDepartmentIds)->count(),
+                'pending_approvals' => Document::whereIn('department_id', $collegeDepartmentIds)->where('status', 'pending')->count(),
+                'pending_video_approvals' => VideoUpload::whereIn('department_id', $collegeDepartmentIds)->where('status', 'pending')->count(),
+                'approved_this_month' => Document::whereIn('department_id', $collegeDepartmentIds)
+                    ->where('status', 'approved')
                     ->whereMonth('created_at', Carbon::now()->month)
                     ->count(),
-                'rejected_this_month' => Document::where('status', 'rejected')
+                'approved_videos_this_month' => VideoUpload::whereIn('department_id', $collegeDepartmentIds)
+                    ->where('status', 'approved')
                     ->whereMonth('created_at', Carbon::now()->month)
                     ->count(),
-                'total_uploads_this_month' => Document::whereMonth('created_at', Carbon::now()->month)->count(),
+                'rejected_this_month' => Document::whereIn('department_id', $collegeDepartmentIds)
+                    ->where('status', 'rejected')
+                    ->whereMonth('created_at', Carbon::now()->month)
+                    ->count(),
+                'rejected_videos_this_month' => VideoUpload::whereIn('department_id', $collegeDepartmentIds)
+                    ->where('status', 'rejected')
+                    ->whereMonth('created_at', Carbon::now()->month)
+                    ->count(),
+                'total_uploads_this_month' => Document::whereIn('department_id', $collegeDepartmentIds)
+                    ->whereMonth('created_at', Carbon::now()->month)
+                    ->count(),
             ];
 
             return response()->json([
@@ -76,15 +105,25 @@ class DeanController extends Controller
                 ], 403);
             }
 
-            $departments = Department::withCount(['users as teacher_count' => function($query) {
-                $query->where('role', 'teacher');
-            }, 'users as student_count' => function($query) {
-                $query->where('role', 'student');
-            }, 'documents as total_documents', 'documents as pending_documents' => function($query) {
-                $query->where('status', 'pending');
-            }, 'documents as approved_documents' => function($query) {
-                $query->where('status', 'approved');
-            }])->get();
+            // Get the dean's college first
+            $college = College::where('dean_id', $user->id)->first();
+            if (!$college) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Dean not assigned to any college'
+                ], 404);
+            }
+
+            $departments = Department::where('college_id', $college->id)
+                ->withCount(['users as teacher_count' => function($query) {
+                    $query->whereIn('role', ['teacher', 'department_head']);
+                }, 'users as student_count' => function($query) {
+                    $query->where('role', 'student');
+                }, 'documents as total_documents', 'documents as pending_documents' => function($query) {
+                    $query->where('status', 'pending');
+                }, 'documents as approved_documents' => function($query) {
+                    $query->where('status', 'approved');
+                }])->get();
 
             $analytics = $departments->map(function($dept) {
                 return [
@@ -129,24 +168,38 @@ class DeanController extends Controller
                 ], 403);
             }
 
-            $faculty = User::where('role', 'teacher')
+            // Get the dean's college
+            $college = \App\Models\College::where('dean_id', $user->id)->first();
+            if (!$college) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Dean not assigned to any college'
+                ], 404);
+            }
+
+            // Get all teachers and department heads in the dean's college
+            $faculty = User::whereIn('role', ['teacher', 'department_head'])
+                ->where('college_id', $college->id)
                 ->with(['department', 'documents'])
                 ->withCount(['documents as total_uploads', 'documents as approved_uploads' => function($query) {
                     $query->where('status', 'approved');
                 }])
                 ->get()
-                ->map(function($teacher) {
+                ->map(function($member) {
                     return [
-                        'id' => $teacher->id,
-                        'name' => $teacher->name,
-                        'email' => $teacher->email,
-                        'department' => $teacher->department ? $teacher->department->name : 'Unknown',
-                        'total_uploads' => $teacher->total_uploads,
-                        'approved_uploads' => $teacher->approved_uploads,
-                        'approval_rate' => $teacher->total_uploads > 0 
-                            ? round(($teacher->approved_uploads / $teacher->total_uploads) * 100, 2)
+                        'id' => $member->id,
+                        'name' => $member->name,
+                        'email' => $member->email,
+                        'role' => $member->role,
+                        'department' => $member->department ? $member->department->name : 'Unknown',
+                        'department_id' => $member->department ? $member->department->id : null,
+                        'total_uploads' => $member->total_uploads,
+                        'approved_uploads' => $member->approved_uploads,
+                        'approval_rate' => $member->total_uploads > 0 
+                            ? round(($member->approved_uploads / $member->total_uploads) * 100, 2)
                             : 0,
-                        'last_activity' => $teacher->documents->max('created_at') ?? 'No activity'
+                        'last_activity' => $member->documents->max('created_at') ?? 'No activity',
+                        'created_at' => $member->created_at
                     ];
                 });
 
@@ -356,6 +409,129 @@ class DeanController extends Controller
     }
 
     /**
+     * Get all documents for dean review
+     */
+    public function getDocuments(Request $request): JsonResponse
+    {
+        try {
+            $user = Auth::user();
+            
+            if ($user->role !== 'college_dean') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Access denied. Dean privileges required.'
+                ], 403);
+            }
+
+            // Build query for all documents
+            $query = Document::with(['uploader', 'department', 'category'])
+                ->latest();
+
+            // Apply search filter
+            if ($request->has('query') && $request->query) {
+                $search = $request->query;
+                $query->where(function ($q) use ($search) {
+                    $q->where('title', 'like', "%{$search}%")
+                      ->orWhere('author', 'like', "%{$search}%")
+                      ->orWhere('description', 'like', "%{$search}%")
+                      ->orWhere('tags', 'like', "%{$search}%");
+                });
+            }
+
+            // Apply status filter
+            if ($request->has('status') && $request->status !== 'all') {
+                $query->where('status', $request->status);
+            }
+
+            // Apply department filter
+            if ($request->has('document_type') && $request->document_type !== 'all') {
+                $query->whereHas('department', function($q) use ($request) {
+                    $q->where('name', $request->document_type);
+                });
+            }
+
+            $documents = $query->paginate(50);
+
+            // Transform data for frontend
+            $transformedDocuments = $documents->getCollection()->map(function ($doc) {
+                // Get the reviewer (department head who approved/rejected)
+                $reviewer = null;
+                if ($doc->status === 'approved' || $doc->status === 'rejected') {
+                    $review = \App\Models\DocumentReview::where('document_id', $doc->id)
+                        ->whereIn('status', ['approved', 'rejected'])
+                        ->with('reviewer')
+                        ->first();
+                    if ($review && $review->reviewer) {
+                        $reviewer = [
+                            'name' => $review->reviewer->name,
+                            'email' => $review->reviewer->email,
+                            'role' => $review->reviewer->role
+                        ];
+                    }
+                }
+
+                // Get comments for this document
+                $comments = \App\Models\DocumentComment::where('document_id', $doc->id)
+                    ->with('fromUser')
+                    ->orderBy('created_at', 'desc')
+                    ->get()
+                    ->map(function ($comment) {
+                        return [
+                            'id' => $comment->id,
+                            'comment' => $comment->comment,
+                            'type' => $comment->type,
+                            'from_user' => $comment->fromUser ? $comment->fromUser->name : 'Unknown',
+                            'created_at' => $comment->created_at->format('Y-m-d H:i:s')
+                        ];
+                    });
+
+                return [
+                    'id' => $doc->id,
+                    'title' => $doc->title,
+                    'author' => $doc->author,
+                    'uploader' => $doc->uploader ? [
+                        'name' => $doc->uploader->name,
+                        'email' => $doc->uploader->email,
+                        'role' => $doc->uploader->role
+                    ] : null,
+                    'department' => $doc->department ? $doc->department->name : 'Unknown',
+                    'department_id' => $doc->department ? $doc->department->id : null,
+                    'type' => $doc->document_type,
+                    'year' => $doc->year,
+                    'date' => $doc->created_at->format('Y-m-d'),
+                    'downloads' => $doc->downloads ?? 0,
+                    'views' => $doc->views ?? 0,
+                    'status' => $doc->status,
+                    'description' => $doc->description ?? '',
+                    'keywords' => $doc->tags ? explode(',', $doc->tags) : [],
+                    'reviewer' => $reviewer,
+                    'comments' => $comments,
+                    'file_size' => $doc->file_size ?? 'Unknown',
+                    'file_path' => $doc->file_path ?? ''
+                ];
+            });
+
+            return response()->json([
+                'success' => true,
+                'data' => $transformedDocuments,
+                'pagination' => [
+                    'current_page' => $documents->currentPage(),
+                    'last_page' => $documents->lastPage(),
+                    'per_page' => $documents->perPage(),
+                    'total' => $documents->total(),
+                ]
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to fetch documents',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
      * Calculate approval rate for a date range
      */
     private function calculateApprovalRate($startDate, $endDate): float
@@ -399,5 +575,248 @@ class DeanController extends Controller
                     : 0
             ];
         })->toArray();
+    }
+
+    /**
+     * Get all departments for registration
+     */
+    public function getDepartments(): JsonResponse
+    {
+        try {
+            $departments = Department::select('id', 'name', 'code', 'description')->get();
+            
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'departments' => $departments
+                ]
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to fetch departments',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Preview document for dean
+     */
+    public function previewDocument($id)
+    {
+        try {
+            $user = Auth::user();
+            
+            if ($user->role !== 'college_dean') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Access denied. Dean privileges required.'
+                ], 403);
+            }
+
+            // Get the dean's college
+            $college = College::where('dean_id', $user->id)->first();
+            if (!$college) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Dean not assigned to any college'
+                ], 404);
+            }
+
+            $document = Document::findOrFail($id);
+            
+            // Check if document belongs to dean's college
+            $collegeDepartmentIds = Department::where('college_id', $college->id)->pluck('id');
+            if (!in_array($document->department_id, $collegeDepartmentIds->toArray())) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Access denied. Document not in your college.'
+                ], 403);
+            }
+
+            // Track the view
+            $document->increment('views');
+
+            // Log the action
+            \App\Models\AuditLog::create([
+                'user_id' => $user->id,
+                'document_id' => $document->id,
+                'action' => 'document_preview',
+                'details' => "Document previewed by dean {$user->name}",
+                'ip_address' => request()->ip(),
+            ]);
+
+            // Return the file for preview
+            $filePath = \Illuminate\Support\Facades\Storage::disk('public')->path($document->file_path);
+            
+            if (!file_exists($filePath)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'File not found'
+                ], 404);
+            }
+
+            return response()->file($filePath);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to preview document',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Download document for dean
+     */
+    public function downloadDocument($id)
+    {
+        try {
+            $user = Auth::user();
+            
+            if ($user->role !== 'college_dean') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Access denied. Dean privileges required.'
+                ], 403);
+            }
+
+            // Get the dean's college
+            $college = College::where('dean_id', $user->id)->first();
+            if (!$college) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Dean not assigned to any college'
+                ], 404);
+            }
+
+            $document = Document::findOrFail($id);
+            
+            // Check if document belongs to dean's college
+            $collegeDepartmentIds = Department::where('college_id', $college->id)->pluck('id');
+            if (!in_array($document->department_id, $collegeDepartmentIds->toArray())) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Access denied. Document not in your college.'
+                ], 403);
+            }
+
+            // Track the download
+            $document->increment('downloads');
+
+            // Log the action
+            \App\Models\AuditLog::create([
+                'user_id' => $user->id,
+                'document_id' => $document->id,
+                'action' => 'document_download',
+                'details' => "Document downloaded by dean {$user->name}",
+                'ip_address' => request()->ip(),
+            ]);
+
+            // Return the file for download
+            $filePath = \Illuminate\Support\Facades\Storage::disk('public')->path($document->file_path);
+            
+            if (!file_exists($filePath)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'File not found'
+                ], 404);
+            }
+
+            return response()->download($filePath);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to download document',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Get college dean dashboard data
+     */
+    public function dashboard(): JsonResponse
+    {
+        try {
+            $user = Auth::user();
+            
+            if ($user->role !== 'college_dean') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Access denied. College dean privileges required.'
+                ], 403);
+            }
+
+            // Get the dean's college
+            $college = College::where('dean_id', $user->id)->first();
+            if (!$college) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'College not assigned to this dean'
+                ], 400);
+            }
+
+            // Get college-level statistics (restricted to dean's college only)
+            $collegeDepartmentIds = Department::where('college_id', $college->id)->pluck('id');
+            
+            $stats = [
+                'total_departments' => $collegeDepartmentIds->count(),
+                'total_teachers' => User::whereIn('role', ['teacher', 'department_head'])->where('college_id', $college->id)->count(),
+                'total_students' => User::where('role', 'student')->where('college_id', $college->id)->count(),
+                'total_documents' => Document::whereIn('department_id', $collegeDepartmentIds)->count(),
+                'pending_approvals' => Document::whereIn('department_id', $collegeDepartmentIds)->where('status', 'pending')->count(),
+                'approved_this_month' => Document::whereIn('department_id', $collegeDepartmentIds)
+                    ->where('status', 'approved')
+                    ->whereMonth('created_at', Carbon::now()->month)
+                    ->count(),
+                'rejected_this_month' => Document::whereIn('department_id', $collegeDepartmentIds)
+                    ->where('status', 'rejected')
+                    ->whereMonth('created_at', Carbon::now()->month)
+                    ->count(),
+                'total_uploads_this_month' => Document::whereIn('department_id', $collegeDepartmentIds)->whereMonth('created_at', Carbon::now()->month)->count(),
+            ];
+
+            // Get department analytics for the dean's college only
+            $departmentAnalytics = Department::where('college_id', $college->id)
+                ->withCount(['users as teacher_count' => function($query) {
+                $query->whereIn('role', ['teacher', 'department_head']);
+            }, 'users as student_count' => function($query) {
+                $query->where('role', 'student');
+            }, 'documents as total_documents', 'documents as pending_documents' => function($query) {
+                $query->where('status', 'pending');
+            }, 'documents as approved_documents' => function($query) {
+                $query->where('status', 'approved');
+            }])->get()
+            ->map(function($dept) {
+                return [
+                    'id' => $dept->id,
+                    'name' => $dept->name,
+                    'teacher_count' => $dept->teacher_count,
+                    'student_count' => $dept->student_count,
+                    'total_documents' => $dept->total_documents,
+                    'pending_documents' => $dept->pending_documents,
+                    'approved_documents' => $dept->approved_documents,
+                    'approval_rate' => $dept->total_documents > 0 
+                        ? round(($dept->approved_documents / $dept->total_documents) * 100, 2)
+                        : 0
+                ];
+            });
+
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'stats' => $stats,
+                    'department_analytics' => $departmentAnalytics,
+                ]
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to fetch dashboard data',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
 }

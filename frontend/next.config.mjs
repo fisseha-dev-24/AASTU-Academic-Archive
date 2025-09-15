@@ -9,6 +9,10 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
+  // Simple configuration to avoid hydration issues
+  experimental: {
+    forceSwcTransforms: true,
+  },
 }
 
 export default nextConfig

@@ -1,5 +1,11 @@
 "use client"
 
+"use client"
+
+"use client"
+
+"use client"
+
 import { useState, useEffect } from "react"
 import Link from "next/link"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -28,8 +34,17 @@ export default function DepartmentOverview() {
     student_id?: string
     department_id?: number
   } | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [stats, setStats] = useState({
+    totalTeachers: 0,
+    totalDocuments: 0,
+    pendingApprovals: 0,
+    approvedThisMonth: 0,
+    rejectedThisMonth: 0,
+    activeCourses: 0,
+  })
 
-  // Load user data
+  // Load user data and stats
   useEffect(() => {
     const userInfo = localStorage.getItem('user_info')
     if (userInfo) {
@@ -40,15 +55,26 @@ export default function DepartmentOverview() {
         console.error('Error parsing user info:', error)
       }
     }
+    loadDepartmentStats()
   }, [])
 
-  const departmentStats = {
-    totalTeachers: 24,
-    totalDocuments: 1247,
-    pendingApprovals: 18,
-    approvedThisMonth: 156,
-    rejectedThisMonth: 12,
-    activeCourses: 45,
+  const loadDepartmentStats = async () => {
+    try {
+      // In a real app, this would fetch from API
+      // For now, we'll set empty stats
+      setStats({
+        totalTeachers: 0,
+        totalDocuments: 0,
+        pendingApprovals: 0,
+        approvedThisMonth: 0,
+        rejectedThisMonth: 0,
+        activeCourses: 0,
+      })
+    } catch (error) {
+      console.error('Error loading department stats:', error)
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -74,7 +100,7 @@ export default function DepartmentOverview() {
                 <Users className="h-8 w-8 text-blue-600" />
                 <div className="ml-4">
                   <p className="text-sm font-medium text-gray-600">Total Teachers</p>
-                  <p className="text-2xl font-bold text-gray-900">{departmentStats.totalTeachers}</p>
+                  <p className="text-2xl font-bold text-gray-900">{stats.totalTeachers}</p>
                 </div>
               </div>
             </CardContent>
@@ -86,7 +112,7 @@ export default function DepartmentOverview() {
                 <FileText className="h-8 w-8 text-emerald-600" />
                 <div className="ml-4">
                   <p className="text-sm font-medium text-gray-600">Total Documents</p>
-                  <p className="text-2xl font-bold text-gray-900">{departmentStats.totalDocuments}</p>
+                  <p className="text-2xl font-bold text-gray-900">{stats.totalDocuments}</p>
                 </div>
               </div>
             </CardContent>
@@ -98,7 +124,7 @@ export default function DepartmentOverview() {
                 <Clock className="h-8 w-8 text-yellow-600" />
                 <div className="ml-4">
                   <p className="text-sm font-medium text-gray-600">Pending Approvals</p>
-                  <p className="text-2xl font-bold text-gray-900">{departmentStats.pendingApprovals}</p>
+                  <p className="text-2xl font-bold text-gray-900">{stats.pendingApprovals}</p>
                 </div>
               </div>
             </CardContent>
@@ -110,7 +136,7 @@ export default function DepartmentOverview() {
                 <BookOpen className="h-8 w-8 text-purple-600" />
                 <div className="ml-4">
                   <p className="text-sm font-medium text-gray-600">Active Courses</p>
-                  <p className="text-2xl font-bold text-gray-900">{departmentStats.activeCourses}</p>
+                  <p className="text-2xl font-bold text-gray-900">{stats.activeCourses}</p>
                 </div>
               </div>
             </CardContent>
@@ -130,7 +156,7 @@ export default function DepartmentOverview() {
               </CardHeader>
               <CardContent>
                 <Button className="w-full bg-blue-600 hover:bg-blue-700">
-                  Review {departmentStats.pendingApprovals} Documents
+                  Review {stats.pendingApprovals} Documents
                 </Button>
               </CardContent>
             </Card>
@@ -147,7 +173,7 @@ export default function DepartmentOverview() {
               </CardHeader>
               <CardContent>
                 <Button className="w-full bg-emerald-600 hover:bg-emerald-700">
-                  Manage {departmentStats.totalTeachers} Teachers
+                  Manage {stats.totalTeachers} Teachers
                 </Button>
               </CardContent>
             </Card>

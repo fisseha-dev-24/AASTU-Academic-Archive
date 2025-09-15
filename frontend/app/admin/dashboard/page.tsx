@@ -1,9 +1,17 @@
 "use client"
 
+"use client"
+
+"use client"
+
+"use client"
+
 import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import Link from "next/link"
+
 import {
   Users,
   FileText,
@@ -20,6 +28,22 @@ import {
   MemoryStick,
   Network,
   Server,
+  Star,
+  Zap,
+  Crown,
+  Globe,
+  Award,
+  Target,
+  TrendingUp,
+  Eye,
+  Download,
+  Upload,
+  Lock,
+  Key,
+  Wifi,
+  WifiOff,
+  Clock,
+  BarChart3,
 } from "lucide-react"
 import { apiClient } from "@/lib/api"
 import PageHeader from "@/components/PageHeader"
@@ -31,7 +55,7 @@ interface User {
   name: string
   email: string
   role: string
-  department?: string
+  department?: string | { name: string }
 }
 
 interface AdminStats {
@@ -102,12 +126,10 @@ interface UserManagement {
   name: string
   email: string
   role: string
-  department: string
-  documents_count: number
-  reviews_count: number
-  created_at: string
-  last_login: string
   status: string
+  department?: string
+  last_login?: string
+  created_at: string
 }
 
 interface AuditLog {
@@ -127,8 +149,8 @@ export default function AdminDashboard() {
   const [systemMonitoring, setSystemMonitoring] = useState<SystemMonitoring | null>(null)
   const [systemHealth, setSystemHealth] = useState<SystemHealth | null>(null)
   const [userManagement, setUserManagement] = useState<UserManagement[]>([])
-  const [auditLogs, setAuditLogs] = useState<AuditLog[]>([])
-  const [activeTab, setActiveTab] = useState("overview")
+  const [updatingUser, setUpdatingUser] = useState<number | null>(null)
+  const [welcomeMessage, setWelcomeMessage] = useState("")
 
   useEffect(() => {
     loadUserData()
@@ -141,6 +163,16 @@ export default function AdminDashboard() {
       try {
         const userData = JSON.parse(userInfo)
         setUser(userData)
+
+        // Set welcome message
+        const hour = new Date().getHours()
+        let greeting = ""
+        if (hour < 12) greeting = "Good morning"
+        else if (hour < 18) greeting = "Good afternoon"
+        else greeting = "Good evening"
+
+        const firstName = userData.name ? userData.name.split(' ')[0] : 'Admin'
+        setWelcomeMessage(`${greeting}, ${firstName}!`)
       } catch (error) {
         console.error('Error parsing user info:', error)
       }
@@ -148,473 +180,583 @@ export default function AdminDashboard() {
   }
 
   const loadDashboardData = async () => {
-    setLoading(true)
     try {
-      // Load all dashboard data in parallel
-      const [statsResponse, monitoringResponse, healthResponse, usersResponse, logsResponse] = await Promise.all([
-        apiClient.getAdminStats(),
-        apiClient.getAdminSystemMonitoring(),
-        apiClient.getAdminSystemHealth(),
-        apiClient.getAdminUserManagement(),
-        apiClient.getAdminAuditLogs()
-      ])
-
-      if (statsResponse.success) {
-        setStats(statsResponse.data)
+      const response = await apiClient.getAdminStats()
+      if (response.success && response.data) {
+        setStats(response.data)
       }
 
-      if (monitoringResponse.success) {
-        setSystemMonitoring(monitoringResponse.data)
+      // Load system monitoring
+      try {
+        const monitoringResponse = await apiClient.getAdminSystemMonitoring()
+        if (monitoringResponse.success) {
+          setSystemMonitoring(monitoringResponse.data)
+        }
+      } catch (error) {
+        console.error('Error loading system monitoring:', error)
+        // Set fallback data
+        setSystemMonitoring({
+          database_status: {
+            status: "unknown",
+            connections: 0,
+            response_time: "0ms"
+          },
+          file_system_status: {
+            status: "unknown",
+            read_permissions: false,
+            write_permissions: false,
+            storage_accessible: false
+          },
+          api_performance: {
+            average_response_time: "0ms",
+            requests_per_minute: 0,
+            error_rate: "0%"
+          },
+          error_logs: {
+            total_errors_today: 0,
+            critical_errors: 0,
+            warning_errors: 0
+          },
+          security_alerts: {
+            failed_login_attempts: 0,
+            suspicious_activities: 0,
+            blocked_ips: 0
+          },
+          backup_status: {
+            last_backup: "",
+            backup_size: "0GB",
+            status: "unknown"
+          }
+        })
       }
 
-      if (healthResponse.success) {
-        setSystemHealth(healthResponse.data)
+      // Load system health
+      try {
+        const healthResponse = await apiClient.getAdminSystemHealth()
+        if (healthResponse.success) {
+          setSystemHealth(healthResponse.data)
+        } else {
+          setSystemHealth({
+            cpu_usage: 0,
+            memory_usage: 0,
+            disk_usage: 0,
+            database_connections: 0,
+            queue_jobs: {
+              pending: 0,
+              processing: 0,
+              completed: 0
+            },
+            cache_hit_rate: 0
+          })
+        }
+      } catch (error) {
+        console.error('Error loading system health:', error)
+        setSystemHealth({
+          cpu_usage: 0,
+          memory_usage: 0,
+          disk_usage: 0,
+          database_connections: 0,
+          queue_jobs: {
+            pending: 0,
+            processing: 0,
+            completed: 0
+          },
+          cache_hit_rate: 0
+        })
       }
 
-      if (usersResponse.success) {
-        setUserManagement(usersResponse.data)
-      }
-
-      if (logsResponse.success) {
-        setAuditLogs(logsResponse.data)
+      // Load user management
+      try {
+        const userResponse = await apiClient.getAdminUserManagement()
+        if (userResponse.success) {
+          setUserManagement(userResponse.data)
+        } else {
+          setUserManagement([])
+        }
+      } catch (error) {
+        console.error('Error loading user management:', error)
+        setUserManagement([])
       }
     } catch (error) {
       console.error('Error loading dashboard data:', error)
-      toast.error('Failed to load dashboard data')
+      // Set empty stats on error
+      setStats({
+        total_users: 0,
+        active_sessions: 0,
+        total_documents: 0,
+        system_health: "unknown",
+        storage_usage: {
+          total: "0GB",
+          used: "0GB",
+          available: "0GB",
+          usage_percentage: 0
+        },
+        recent_logins: 0,
+        failed_attempts: 0,
+        system_uptime: "0 days, 0 hours"
+      })
     } finally {
       setLoading(false)
     }
   }
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case "Success":
-      case "Healthy":
-      case "Completed":
-        return <Badge className="bg-green-100 text-green-800">Success</Badge>
-      case "Failed":
-      case "Error":
-        return <Badge className="bg-red-100 text-red-800">Failed</Badge>
-      case "Warning":
-      case "Pending":
-        return <Badge className="bg-yellow-100 text-yellow-800">Warning</Badge>
-      default:
-        return <Badge variant="secondary">{status}</Badge>
+  const handleUserStatusUpdate = async (userId: number, status: string) => {
+    setUpdatingUser(userId)
+    try {
+      const response = await apiClient.updateUserStatus(userId, status)
+      if (response.success) {
+        toast.success(`User status updated to ${status}`)
+        loadDashboardData() // Refresh data
+      } else {
+        toast.error('Failed to update user status')
+      }
+    } catch (error) {
+      console.error('Error updating user status:', error)
+      toast.error('Error updating user status')
+    } finally {
+      setUpdatingUser(null)
     }
   }
 
-  const getHealthColor = (percentage: number) => {
-    if (percentage >= 80) return "text-green-600"
-    if (percentage >= 60) return "text-yellow-600"
-    return "text-red-600"
+  const getStatusBadge = (status: string) => {
+    switch (status.toLowerCase()) {
+      case 'active':
+        return <Badge className="bg-green-100 text-green-800">Active</Badge>
+      case 'inactive':
+        return <Badge className="bg-gray-100 text-gray-800">Inactive</Badge>
+      case 'banned':
+        return <Badge className="bg-red-100 text-red-800">Banned</Badge>
+      case 'suspended':
+        return <Badge className="bg-yellow-100 text-yellow-800">Suspended</Badge>
+      case 'pending_verification':
+        return <Badge className="bg-blue-100 text-blue-800">Pending Verification</Badge>
+      case 'on_leave':
+        return <Badge className="bg-purple-100 text-purple-800">On Leave</Badge>
+      default:
+        return <Badge className="bg-gray-100 text-gray-800">{status}</Badge>
+    }
+  }
+
+  const getSystemHealthColor = (health: string) => {
+    switch (health.toLowerCase()) {
+      case 'excellent':
+        return 'text-green-600'
+      case 'good':
+        return 'text-blue-600'
+      case 'fair':
+        return 'text-yellow-600'
+      case 'poor':
+        return 'text-red-600'
+      default:
+        return 'text-gray-600'
+    }
+  }
+
+  const getSystemHealthBg = (health: string) => {
+    switch (health.toLowerCase()) {
+      case 'excellent':
+        return 'bg-green-100'
+      case 'good':
+        return 'bg-blue-100'
+      case 'fair':
+        return 'bg-yellow-100'
+      case 'poor':
+        return 'bg-red-100'
+      default:
+        return 'bg-gray-100'
+    }
   }
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading admin dashboard...</p>
+          <p className="mt-4 text-gray-600">Loading your dashboard...</p>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
       <PageHeader
         title="Admin Dashboard"
-        subtitle="System Administration & Management"
+        subtitle="System administration and monitoring"
         backUrl="/"
         user={user}
       />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Stats Cards */}
-        {stats && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            <Card className="shadow-lg border-0 bg-white">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-blue-700">Total Users</CardTitle>
-                <Users className="h-4 w-4 text-blue-600" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-blue-600">{stats.total_users.toLocaleString()}</div>
-                <p className="text-xs text-gray-600">+12% from last month</p>
-              </CardContent>
-            </Card>
-
-            <Card className="shadow-lg border-0 bg-white">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-emerald-700">Active Sessions</CardTitle>
-                <Activity className="h-4 w-4 text-emerald-600" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-emerald-600">{stats.active_sessions}</div>
-                <p className="text-xs text-gray-600">+5% from yesterday</p>
-              </CardContent>
-            </Card>
-
-            <Card className="shadow-lg border-0 bg-white">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-orange-700">Total Documents</CardTitle>
-                <FileText className="h-4 w-4 text-orange-600" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-orange-600">{stats.total_documents.toLocaleString()}</div>
-                <p className="text-xs text-gray-600">+8% from last week</p>
-              </CardContent>
-            </Card>
-
-            <Card className="shadow-lg border-0 bg-white">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-purple-700">System Health</CardTitle>
-                <Shield className="h-4 w-4 text-purple-600" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-purple-600">{stats.system_health}</div>
-                <p className="text-xs text-gray-600">All systems operational</p>
-              </CardContent>
-            </Card>
-          </div>
-        )}
-
-        {/* Tab Navigation */}
+        {/* Welcome Section */}
         <div className="mb-8">
-          <div className="border-b border-gray-200">
-            <nav className="-mb-px flex space-x-8">
-              <button
-                onClick={() => setActiveTab("overview")}
-                className={`py-2 px-1 border-b-2 font-medium text-sm ${
-                  activeTab === "overview"
-                    ? "border-blue-500 text-blue-600"
-                    : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-                }`}
-              >
-                Overview
-              </button>
-              <button
-                onClick={() => setActiveTab("monitoring")}
-                className={`py-2 px-1 border-b-2 font-medium text-sm ${
-                  activeTab === "monitoring"
-                    ? "border-blue-500 text-blue-600"
-                    : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-                }`}
-              >
-                System Monitoring
-              </button>
-              <button
-                onClick={() => setActiveTab("users")}
-                className={`py-2 px-1 border-b-2 font-medium text-sm ${
-                  activeTab === "users"
-                    ? "border-blue-500 text-blue-600"
-                    : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-                }`}
-              >
-                User Management
-              </button>
-              <button
-                onClick={() => setActiveTab("logs")}
-                className={`py-2 px-1 border-b-2 font-medium text-sm ${
-                  activeTab === "logs"
-                    ? "border-blue-500 text-blue-600"
-                    : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-                }`}
-              >
-                Audit Logs
-              </button>
-            </nav>
+          <div className="bg-gradient-to-r from-gray-800 via-gray-900 to-black rounded-3xl p-8 text-white shadow-2xl">
+            <div className="flex items-center justify-between">
+              <div className="space-y-4">
+                <div className="flex items-center space-x-2">
+                  <Crown className="h-5 w-5 text-yellow-300" />
+                  <span className="text-gray-100 font-medium">Welcome back, Administrator!</span>
+                </div>
+                <h1 className="text-3xl lg:text-4xl font-bold tracking-tight">
+                  {welcomeMessage}
+                </h1>
+                <p className="text-gray-100 text-lg max-w-2xl">
+                  Monitor system health, manage users, and ensure optimal performance of the academic archive platform.
+                </p>
+                <div className="flex items-center space-x-6 pt-2">
+                  <div className="flex items-center space-x-2">
+                    <Shield className="h-5 w-5 text-green-300" />
+                    <span className="text-gray-100">System Administrator</span>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Monitor className="h-5 w-5 text-blue-300" />
+                    <span className="text-gray-100">System Health: {stats?.system_health}</span>
+                  </div>
+                </div>
+              </div>
+              <div className="hidden lg:block">
+                <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6">
+                  <div className="text-center">
+                    <div className="text-3xl font-bold text-white">{stats?.total_users?.toLocaleString() || 0}</div>
+                    <div className="text-gray-100 text-sm">Total Users</div>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
-        {/* Tab Content */}
-        {activeTab === "overview" && (
-          <div className="space-y-6">
-            {/* System Health Metrics */}
-            {systemHealth && (
-              <Card className="shadow-lg border-0 bg-white">
-                <CardHeader>
-                  <CardTitle className="flex items-center">
-                    <Monitor className="h-5 w-5 mr-2" />
-                    System Health Metrics
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    <div className="text-center">
-                      <div className="flex items-center justify-center mb-2">
-                        <Cpu className="h-6 w-6 text-blue-600 mr-2" />
-                        <span className="text-sm font-medium">CPU Usage</span>
-                      </div>
-                      <p className={`text-2xl font-bold ${getHealthColor(systemHealth.cpu_usage)}`}>
-                        {systemHealth.cpu_usage}%
-                      </p>
-                    </div>
-                    <div className="text-center">
-                      <div className="flex items-center justify-center mb-2">
-                        <MemoryStick className="h-6 w-6 text-green-600 mr-2" />
-                        <span className="text-sm font-medium">Memory Usage</span>
-                      </div>
-                      <p className={`text-2xl font-bold ${getHealthColor(systemHealth.memory_usage)}`}>
-                        {systemHealth.memory_usage}%
-                      </p>
-                    </div>
-                    <div className="text-center">
-                      <div className="flex items-center justify-center mb-2">
-                        <HardDrive className="h-6 w-6 text-orange-600 mr-2" />
-                        <span className="text-sm font-medium">Disk Usage</span>
-                      </div>
-                      <p className={`text-2xl font-bold ${getHealthColor(systemHealth.disk_usage)}`}>
-                        {systemHealth.disk_usage}%
-                      </p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Storage Usage */}
-            {stats && (
-              <Card className="shadow-lg border-0 bg-white">
-                <CardHeader>
-                  <CardTitle className="flex items-center">
-                    <HardDrive className="h-5 w-5 mr-2" />
-                    Storage Usage
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm font-medium">Used Space</span>
-                      <span className="text-sm text-gray-600">{stats.storage_usage.used}</span>
-                    </div>
-                    <div className="w-full bg-gray-200 rounded-full h-2">
-                      <div 
-                        className="bg-blue-600 h-2 rounded-full" 
-                        style={{ width: `${stats.storage_usage.usage_percentage}%` }}
-                      ></div>
-                    </div>
-                    <div className="flex justify-between items-center text-sm text-gray-600">
-                      <span>Available: {stats.storage_usage.available}</span>
-                      <span>Total: {stats.storage_usage.total}</span>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Security Alerts */}
-            {systemMonitoring && (
-              <Card className="shadow-lg border-0 bg-white">
-                <CardHeader>
-                  <CardTitle className="flex items-center">
-                    <AlertTriangle className="h-5 w-5 mr-2" />
-                    Security Alerts
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div className="text-center p-4 bg-red-50 rounded-lg">
-                      <p className="text-2xl font-bold text-red-600">{systemMonitoring.security_alerts.failed_login_attempts}</p>
-                      <p className="text-sm text-gray-600">Failed Logins</p>
-                    </div>
-                    <div className="text-center p-4 bg-yellow-50 rounded-lg">
-                      <p className="text-2xl font-bold text-yellow-600">{systemMonitoring.security_alerts.suspicious_activities}</p>
-                      <p className="text-sm text-gray-600">Suspicious Activities</p>
-                    </div>
-                    <div className="text-center p-4 bg-orange-50 rounded-lg">
-                      <p className="text-2xl font-bold text-orange-600">{systemMonitoring.security_alerts.blocked_ips}</p>
-                      <p className="text-sm text-gray-600">Blocked IPs</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-          </div>
-        )}
-
-        {activeTab === "monitoring" && systemMonitoring && (
-          <div className="space-y-6">
-            {/* Database Status */}
-            <Card className="shadow-lg border-0 bg-white">
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <Database className="h-5 w-5 mr-2" />
-                  Database Status
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div>
-                    <p className="text-sm font-medium text-gray-600">Status</p>
-                    <div className="flex items-center mt-1">
-                      {getStatusBadge(systemMonitoring.database_status.status)}
-                    </div>
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-gray-600">Connections</p>
-                    <p className="text-lg font-semibold">{systemMonitoring.database_status.connections}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-gray-600">Response Time</p>
-                    <p className="text-lg font-semibold">{systemMonitoring.database_status.response_time}</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* API Performance */}
-            <Card className="shadow-lg border-0 bg-white">
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <Network className="h-5 w-5 mr-2" />
-                  API Performance
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div>
-                    <p className="text-sm font-medium text-gray-600">Avg Response Time</p>
-                    <p className="text-lg font-semibold">{systemMonitoring.api_performance.average_response_time}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-gray-600">Requests/Min</p>
-                    <p className="text-lg font-semibold">{systemMonitoring.api_performance.requests_per_minute}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-gray-600">Error Rate</p>
-                    <p className="text-lg font-semibold">{systemMonitoring.api_performance.error_rate}</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Error Logs */}
-            <Card className="shadow-lg border-0 bg-white">
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <AlertTriangle className="h-5 w-5 mr-2" />
-                  Error Logs (Today)
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="text-center p-4 bg-red-50 rounded-lg">
-                    <p className="text-2xl font-bold text-red-600">{systemMonitoring.error_logs.critical_errors}</p>
-                    <p className="text-sm text-gray-600">Critical</p>
-                  </div>
-                  <div className="text-center p-4 bg-yellow-50 rounded-lg">
-                    <p className="text-2xl font-bold text-yellow-600">{systemMonitoring.error_logs.warning_errors}</p>
-                    <p className="text-sm text-gray-600">Warnings</p>
-                  </div>
-                  <div className="text-center p-4 bg-gray-50 rounded-lg">
-                    <p className="text-2xl font-bold text-gray-600">{systemMonitoring.error_logs.total_errors_today}</p>
-                    <p className="text-sm text-gray-600">Total</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        )}
-
-        {activeTab === "users" && (
-          <Card className="shadow-lg border-0 bg-white">
-            <CardHeader>
-              <CardTitle>User Management</CardTitle>
-              <CardDescription>System users and their activities</CardDescription>
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-semibold text-gray-700">Total Users</CardTitle>
+              <Users className="h-5 w-5 text-gray-600" />
             </CardHeader>
             <CardContent>
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        User
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Role
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Department
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Documents
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Last Login
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Status
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {userManagement.map((user) => (
-                      <tr key={user.id}>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div>
-                            <div className="text-sm font-medium text-gray-900">{user.name}</div>
-                            <div className="text-sm text-gray-500">{user.email}</div>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <Badge variant="outline">{user.role}</Badge>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm text-gray-900">{user.department}</div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm text-gray-900">{user.documents_count}</div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm text-gray-900">{user.last_login}</div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          {getStatusBadge(user.status)}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              <div className="text-2xl font-bold text-gray-600">{stats?.total_users?.toLocaleString() || 0}</div>
+              <p className="text-xs text-gray-600 mt-1">+8% from last month</p>
             </CardContent>
           </Card>
-        )}
 
-        {activeTab === "logs" && (
-          <Card className="shadow-lg border-0 bg-white">
+          <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-semibold text-blue-700">Active Sessions</CardTitle>
+              <Activity className="h-5 w-5 text-blue-600" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-blue-600">{stats?.active_sessions || 0}</div>
+              <p className="text-xs text-gray-600 mt-1">Currently online</p>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-semibold text-green-700">Total Documents</CardTitle>
+              <FileText className="h-5 w-5 text-green-600" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-green-600">{stats?.total_documents?.toLocaleString() || 0}</div>
+              <p className="text-xs text-gray-600 mt-1">+15% from last month</p>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-semibold text-purple-700">System Health</CardTitle>
+              <Monitor className="h-5 w-5 text-purple-600" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-purple-600">{stats?.system_health || 'Good'}</div>
+              <p className="text-xs text-gray-600 mt-1">Uptime: {stats?.system_uptime || 'N/A'}</p>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Quick Actions */}
+        <div className="mb-8">
+          <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center space-x-2">
+            <Zap className="h-6 w-6 text-gray-600" />
+            <span>Quick Actions</span>
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <Link href="/admin/users">
+              <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 cursor-pointer group">
+                <CardContent className="p-6">
+                  <div className="flex items-center space-x-4">
+                    <div className="bg-gray-100 p-3 rounded-xl group-hover:bg-gray-200 transition-colors duration-200">
+                      <Users className="h-6 w-6 text-gray-600" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-gray-900">User Management</h3>
+                      <p className="text-sm text-gray-600">Manage all users</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </Link>
+
+            <Link href="/admin/system">
+              <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 cursor-pointer group">
+                <CardContent className="p-6">
+                  <div className="flex items-center space-x-4">
+                    <div className="bg-blue-100 p-3 rounded-xl group-hover:bg-blue-200 transition-colors duration-200">
+                      <Server className="h-6 w-6 text-blue-600" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-gray-900">System Monitor</h3>
+                      <p className="text-sm text-gray-600">Monitor system health</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </Link>
+
+            <Link href="/admin/security">
+              <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 cursor-pointer group">
+                <CardContent className="p-6">
+                  <div className="flex items-center space-x-4">
+                    <div className="bg-green-100 p-3 rounded-xl group-hover:bg-green-200 transition-colors duration-200">
+                      <Shield className="h-6 w-6 text-green-600" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-gray-900">Security</h3>
+                      <p className="text-sm text-gray-600">Security settings</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </Link>
+
+            <Link href="/admin/backups">
+              <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 cursor-pointer group">
+                <CardContent className="p-6">
+                  <div className="flex items-center space-x-4">
+                    <div className="bg-purple-100 p-3 rounded-xl group-hover:bg-purple-200 transition-colors duration-200">
+                      <Database className="h-6 w-6 text-purple-600" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-gray-900">Backups</h3>
+                      <p className="text-sm text-gray-600">Manage backups</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </Link>
+
+            <Link href="/admin/audit-logs">
+              <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 cursor-pointer group">
+                <CardContent className="p-6">
+                  <div className="flex items-center space-x-4">
+                    <div className="bg-orange-100 p-3 rounded-xl group-hover:bg-orange-200 transition-colors duration-200">
+                      <FileText className="h-6 w-6 text-orange-600" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-gray-900">Audit Logs</h3>
+                      <p className="text-sm text-gray-600">System activity logs</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </Link>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          {/* System Health */}
+          <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-xl">
             <CardHeader>
-              <CardTitle>Audit Logs</CardTitle>
-              <CardDescription>System activity and user actions</CardDescription>
+              <CardTitle className="flex items-center space-x-2">
+                <Monitor className="h-5 w-5 text-blue-600" />
+                <span>System Health</span>
+              </CardTitle>
+              <CardDescription>Real-time system monitoring</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {auditLogs.map((log) => (
-                  <div key={log.id} className="flex items-start space-x-3 p-4 bg-gray-50 rounded-lg">
-                    <div className="flex-shrink-0">
-                      <Activity className="h-5 w-5 text-blue-600" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-gray-900">
-                        {log.action} by {log.user}
-                      </p>
-                      {log.document && (
-                        <p className="text-sm text-gray-600">Document: {log.document}</p>
-                      )}
-                      <p className="text-sm text-gray-500">{log.details}</p>
-                      <div className="flex items-center space-x-4 mt-1">
-                        <p className="text-xs text-gray-400">{log.timestamp}</p>
-                        <p className="text-xs text-gray-400">IP: {log.ip_address}</p>
+                {systemHealth && (
+                  <>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="p-4 bg-gray-50/50 rounded-xl">
+                        <div className="flex items-center space-x-2 mb-2">
+                          <Cpu className="h-4 w-4 text-blue-500" />
+                          <span className="text-sm font-medium">CPU Usage</span>
+                        </div>
+                        <div className="text-2xl font-bold text-blue-600">{systemHealth.cpu_usage}%</div>
                       </div>
+                      <div className="p-4 bg-gray-50/50 rounded-xl">
+                        <div className="flex items-center space-x-2 mb-2">
+                          <MemoryStick className="h-4 w-4 text-green-500" />
+                          <span className="text-sm font-medium">Memory Usage</span>
+                        </div>
+                        <div className="text-2xl font-bold text-green-600">{systemHealth.memory_usage}%</div>
+                      </div>
+                    </div>
+                    <div className="p-4 bg-gray-50/50 rounded-xl">
+                      <div className="flex items-center space-x-2 mb-2">
+                        <HardDrive className="h-4 w-4 text-purple-500" />
+                        <span className="text-sm font-medium">Disk Usage</span>
+                      </div>
+                      <div className="text-2xl font-bold text-purple-600">{systemHealth.disk_usage}%</div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="p-4 bg-gray-50/50 rounded-xl">
+                        <div className="flex items-center space-x-2 mb-2">
+                          <Database className="h-4 w-4 text-orange-500" />
+                          <span className="text-sm font-medium">DB Connections</span>
+                        </div>
+                        <div className="text-2xl font-bold text-orange-600">{systemHealth.database_connections}</div>
+                      </div>
+                      <div className="p-4 bg-gray-50/50 rounded-xl">
+                        <div className="flex items-center space-x-2 mb-2">
+                          <BarChart3 className="h-4 w-4 text-indigo-500" />
+                          <span className="text-sm font-medium">Cache Hit Rate</span>
+                        </div>
+                        <div className="text-2xl font-bold text-indigo-600">{systemHealth.cache_hit_rate}%</div>
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* User Management */}
+          <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-xl">
+            <CardHeader>
+              <CardTitle className="flex items-center space-x-2">
+                <Users className="h-5 w-5 text-gray-600" />
+                <span>User Management</span>
+              </CardTitle>
+              <CardDescription>Manage user accounts and permissions</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {userManagement.slice(0, 5).map((user) => (
+                  <div key={user.id} className="p-4 bg-gray-50/50 rounded-xl hover:bg-gray-50 transition-colors duration-200">
+                    <div className="flex items-center justify-between mb-2">
+                      <div>
+                        <h4 className="font-semibold text-gray-900">{user.name}</h4>
+                        <p className="text-sm text-gray-500">{user.email}</p>
+                      </div>
+                      {getStatusBadge(user.status)}
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <div className="text-sm text-gray-600">
+                        <span className="capitalize">{user.role.replace('_', ' ')}</span>
+                        {user.department && (
+                          <span className="ml-2">• {user.department}</span>
+                        )}
+                      </div>
+                      <select
+                        className="text-xs border border-gray-300 rounded px-2 py-1 bg-white"
+                        value={user.status}
+                        onChange={(e) => handleUserStatusUpdate(user.id, e.target.value)}
+                        disabled={updatingUser === user.id}
+                      >
+                        <option value="active">Active</option>
+                        <option value="inactive">Inactive</option>
+                        <option value="banned">Banned</option>
+                        <option value="suspended">Suspended</option>
+                        <option value="pending_verification">Pending Verification</option>
+                        <option value="on_leave">On Leave</option>
+                      </select>
                     </div>
                   </div>
                 ))}
               </div>
             </CardContent>
           </Card>
-        )}
+        </div>
+
+        {/* System Monitoring */}
+        <div className="mt-8">
+          <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-xl">
+            <CardHeader>
+              <CardTitle className="flex items-center space-x-2">
+                <Server className="h-5 w-5 text-purple-600" />
+                <span>System Monitoring</span>
+              </CardTitle>
+              <CardDescription>Real-time system status and performance metrics</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {systemMonitoring && (
+                  <>
+                    <div className="p-4 bg-gray-50/50 rounded-xl">
+                      <div className="flex items-center space-x-2 mb-3">
+                        <Database className="h-5 w-5 text-blue-500" />
+                        <h4 className="font-semibold text-gray-900">Database</h4>
+                      </div>
+                      <div className="space-y-2 text-sm">
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Status:</span>
+                          <Badge className={systemMonitoring.database_status.status === 'healthy' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}>
+                            {systemMonitoring.database_status.status}
+                          </Badge>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Connections:</span>
+                          <span className="font-semibold">{systemMonitoring.database_status.connections}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Response Time:</span>
+                          <span className="font-semibold">{systemMonitoring.database_status.response_time}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="p-4 bg-gray-50/50 rounded-xl">
+                      <div className="flex items-center space-x-2 mb-3">
+                        <HardDrive className="h-5 w-5 text-green-500" />
+                        <h4 className="font-semibold text-gray-900">File System</h4>
+                      </div>
+                      <div className="space-y-2 text-sm">
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Status:</span>
+                          <Badge className={systemMonitoring.file_system_status.status === 'healthy' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}>
+                            {systemMonitoring.file_system_status.status}
+                          </Badge>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Read Access:</span>
+                          <span className="font-semibold">{systemMonitoring.file_system_status.read_permissions ? '✓' : '✗'}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Write Access:</span>
+                          <span className="font-semibold">{systemMonitoring.file_system_status.write_permissions ? '✓' : '✗'}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="p-4 bg-gray-50/50 rounded-xl">
+                      <div className="flex items-center space-x-2 mb-3">
+                        <Network className="h-5 w-5 text-purple-500" />
+                        <h4 className="font-semibold text-gray-900">API Performance</h4>
+                      </div>
+                      <div className="space-y-2 text-sm">
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Avg Response:</span>
+                          <span className="font-semibold">{systemMonitoring.api_performance.average_response_time}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Requests/min:</span>
+                          <span className="font-semibold">{systemMonitoring.api_performance.requests_per_minute}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Error Rate:</span>
+                          <span className="font-semibold">{systemMonitoring.api_performance.error_rate}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       </div>
-      
+
       <Footer />
     </div>
   )

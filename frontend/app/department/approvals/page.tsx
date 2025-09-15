@@ -1,12 +1,20 @@
 "use client"
 
+"use client"
+
+"use client"
+
+"use client"
+
 import { useState, useEffect } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { CheckCircle, XCircle, Eye, Search, Download, ArrowLeft, Users, FileText, Calendar, Loader2 } from "lucide-react"
+import { Textarea } from "@/components/ui/textarea"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { CheckCircle, XCircle, Eye, Search, Download, ArrowLeft, Users, FileText, Calendar, Loader2, MessageSquare } from "lucide-react"
 import Link from "next/link"
 import { apiClient } from "@/lib/api"
 import PageHeader from "@/components/PageHeader"
@@ -58,6 +66,17 @@ export default function DocumentApproval() {
   const [loading, setLoading] = useState(true)
   const [approving, setApproving] = useState<number | null>(null)
   const [rejecting, setRejecting] = useState<number | null>(null)
+  const [commentDialog, setCommentDialog] = useState<{
+    isOpen: boolean
+    documentId: number | null
+    comment: string
+    type: string
+  }>({
+    isOpen: false,
+    documentId: null,
+    comment: '',
+    type: 'general'
+  })
 
   // Load user data and documents
   useEffect(() => {
@@ -82,7 +101,8 @@ export default function DocumentApproval() {
       if (searchTerm) params.search = searchTerm
       if (filterStatus !== 'all') params.status = filterStatus
 
-      const response = await apiClient.getPendingDocuments(params)
+      // Load all documents instead of just pending ones
+      const response = await apiClient.getDocuments(params)
       
       if (response.success && response.data) {
         setDocuments(response.data)
@@ -126,7 +146,16 @@ export default function DocumentApproval() {
 
       if (response.success) {
         toast.success('Document approved successfully')
-        loadDocuments() // Reload documents
+        
+        // Update local state instead of reloading
+        setDocuments(prevDocs => 
+          prevDocs.map(doc => 
+            doc.id === documentId 
+              ? { ...doc, status: 'approved' }
+              : doc
+          )
+        )
+        
         loadStats() // Reload stats
       } else {
         toast.error(response.message || 'Failed to approve document')
@@ -152,7 +181,16 @@ export default function DocumentApproval() {
 
       if (response.success) {
         toast.success('Document rejected successfully')
-        loadDocuments() // Reload documents
+        
+        // Update local state instead of reloading
+        setDocuments(prevDocs => 
+          prevDocs.map(doc => 
+            doc.id === documentId 
+              ? { ...doc, status: 'rejected' }
+              : doc
+          )
+        )
+        
         loadStats() // Reload stats
       } else {
         toast.error(response.message || 'Failed to reject document')
@@ -193,25 +231,67 @@ export default function DocumentApproval() {
     }
   }
 
-  const handlePreview = (document: Document) => {
-    // Use the proper API endpoint for document preview
-    const token = localStorage.getItem('auth_token');
-    if (token && document.id) {
-      const previewUrl = `http://localhost:8000/api/documents/${document.id}/preview`;
-      window.open(previewUrl, '_blank');
-    } else {
-      toast.error('Document preview not available');
+  const handlePreview = async (documentId: number) => {
+    try {
+      await apiClient.previewDepartmentDocument(documentId)
+      console.log('Document preview opened:', documentId)
+    } catch (error) {
+      console.error('Error previewing document:', error)
+      toast.error('Failed to preview document')
     }
   }
 
   const handleDownload = async (documentId: number) => {
     try {
-      await apiClient.downloadDocument(documentId)
+      await apiClient.downloadDepartmentDocument(documentId)
       console.log('Document download started:', documentId)
       toast.success('Download started')
     } catch (error) {
       console.error('Error downloading document:', error)
       toast.error('Failed to download document')
+    }
+  }
+
+  const openCommentDialog = (documentId: number) => {
+    setCommentDialog({
+      isOpen: true,
+      documentId,
+      comment: '',
+      type: 'general'
+    })
+  }
+
+  const closeCommentDialog = () => {
+    setCommentDialog({
+      isOpen: false,
+      documentId: null,
+      comment: '',
+      type: 'general'
+    })
+  }
+
+  const handleCommentSubmit = async () => {
+    if (!commentDialog.documentId || !commentDialog.comment.trim()) {
+      toast.error('Please enter a comment')
+      return
+    }
+
+    try {
+      const response = await apiClient.addDocumentComment(
+        commentDialog.documentId,
+        commentDialog.comment,
+        commentDialog.type
+      )
+
+      if (response.success) {
+        toast.success('Comment sent successfully')
+        closeCommentDialog()
+      } else {
+        toast.error(response.message || 'Failed to send comment')
+      }
+    } catch (error) {
+      console.error('Error sending comment:', error)
+      toast.error('Failed to send comment')
     }
   }
 
@@ -301,7 +381,7 @@ export default function DocumentApproval() {
                       <Button 
                         variant="outline" 
                         size="sm" 
-                        onClick={() => handlePreview(doc)}
+                        onClick={() => handlePreview(doc.id)}
                       >
                         <Eye className="h-4 w-4 mr-1" />
                         Preview
@@ -313,6 +393,15 @@ export default function DocumentApproval() {
                       >
                         <Download className="h-4 w-4 mr-1" />
                         Download
+                      </Button>
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100"
+                        onClick={() => openCommentDialog(doc.id)}
+                      >
+                        <MessageSquare className="h-4 w-4 mr-1" />
+                        Comment
                       </Button>
                       <Button 
                         variant="outline" 
@@ -387,6 +476,74 @@ export default function DocumentApproval() {
           </Card>
         </div>
       </div>
+      
+      {/* Comment Dialog */}
+      <Dialog open={commentDialog.isOpen} onOpenChange={closeCommentDialog}>
+        <DialogContent className="sm:max-w-md bg-white border border-gray-200 shadow-lg">
+          <DialogHeader className="pb-4">
+            <DialogTitle className="text-lg font-semibold text-gray-900">
+              Send Comment to Teacher
+            </DialogTitle>
+            <DialogDescription className="text-sm text-gray-600">
+              Send a comment to the teacher about this document.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Comment Type
+              </label>
+              <Select 
+                value={commentDialog.type} 
+                onValueChange={(value) => setCommentDialog(prev => ({ ...prev, type: value }))}
+              >
+                <SelectTrigger className="w-full bg-white border-gray-300">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="bg-white border border-gray-200">
+                  <SelectItem value="general" className="text-gray-900">General</SelectItem>
+                  <SelectItem value="approval" className="text-gray-900">Approval Note</SelectItem>
+                  <SelectItem value="rejection" className="text-gray-900">Rejection Reason</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Comment
+              </label>
+              <Textarea
+                value={commentDialog.comment}
+                onChange={(e) => setCommentDialog(prev => ({ ...prev, comment: e.target.value }))}
+                placeholder="Enter your comment here..."
+                rows={4}
+                className="w-full bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              />
+              <div className="text-right text-xs text-gray-500 mt-1">
+                {commentDialog.comment.length}/500 characters
+              </div>
+            </div>
+          </div>
+          
+          <DialogFooter className="pt-4">
+            <Button 
+              variant="outline" 
+              onClick={closeCommentDialog}
+              className="bg-gray-50 text-gray-700 border-gray-300 hover:bg-gray-100"
+            >
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleCommentSubmit}
+              disabled={!commentDialog.comment.trim()}
+              className="bg-blue-600 text-white hover:bg-blue-700 disabled:bg-gray-300 disabled:text-gray-500"
+            >
+              Send Comment
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       
       <Footer />
     </div>

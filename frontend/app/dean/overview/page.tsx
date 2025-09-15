@@ -1,5 +1,11 @@
 "use client"
 
+"use client"
+
+"use client"
+
+"use client"
+
 import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -91,18 +97,36 @@ export default function CollegeOverview() {
     setLoading(true)
     setError(null)
     try {
-      // Load department analytics and institutional reports in parallel
-      const [analyticsResponse, reportsResponse] = await Promise.all([
+      // Load department analytics and dashboard data in parallel
+      const [analyticsResponse, dashboardResponse] = await Promise.all([
         apiClient.getDeanDepartmentAnalytics(),
-        apiClient.getDeanInstitutionalReports()
+        apiClient.getDeanDashboard()
       ])
 
       if (analyticsResponse.success) {
         setDepartmentAnalytics(analyticsResponse.data)
       }
 
-      if (reportsResponse.success) {
-        setInstitutionalReports(reportsResponse.data)
+      if (dashboardResponse.success && dashboardResponse.data) {
+        // Create institutional reports from dashboard data
+        const stats = dashboardResponse.data.stats
+        setInstitutionalReports({
+          document_activity: {
+            total_uploads: stats.total_documents,
+            total_approvals: stats.approved_this_month,
+            approval_rate: stats.total_documents > 0 ? Math.round((stats.approved_this_month / stats.total_documents) * 100) : 0
+          },
+          user_activity: {
+            new_users: 0, // Not available in current API
+            active_users: stats.total_teachers + stats.total_students
+          },
+          department_performance: analyticsResponse.data?.map(dept => ({
+            department: dept.name,
+            total_documents: dept.total_documents,
+            approved_documents: dept.approved_documents,
+            approval_rate: dept.approval_rate
+          })) || []
+        })
       }
     } catch (error) {
       console.error('Error loading overview data:', error)

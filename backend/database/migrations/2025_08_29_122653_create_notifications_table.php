@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('notifications', function (Blueprint $table) {
             $table->id();
-            $table->unsignedBigInteger('user_id')->nullable(); // Target user (null for system-wide)
+            $table->unsignedBigInteger('user_id')->nullable()->index(); // Target user (null for system-wide)
             $table->string('type'); // document_approved, document_rejected, system_alert, etc.
             $table->string('title');
             $table->text('message');
@@ -24,7 +24,7 @@ return new class extends Migration
             $table->timestamp('expires_at')->nullable();
             $table->timestamps();
             
-            $table->foreign('user_id')->references('id')->on('users')->onDelete('cascade');
+            
             
             $table->index(['user_id', 'is_read', 'created_at']);
             $table->index(['type', 'created_at']);

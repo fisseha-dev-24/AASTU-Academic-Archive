@@ -12,8 +12,8 @@ return new class extends Migration
     public function up(){
     Schema::create('document_reviews', function (Blueprint $table) {
         $table->id();
-        $table->foreignId('document_id')->constrained()->onDelete('cascade');
-        $table->foreignId('reviewer_id')->constrained('users')->onDelete('cascade');
+        $table->unsignedBigInteger('document_id')->index();
+        $table->unsignedBigInteger('reviewer_id')->index();
         $table->enum('status', ['approved', 'rejected']);
         $table->text('comments')->nullable();
         $table->timestamps();

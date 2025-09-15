@@ -1,3 +1,7 @@
+"use client"
+
+"use client"
+
 export default function AdminDashboardLoading() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">

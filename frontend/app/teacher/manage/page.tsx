@@ -1,6 +1,12 @@
 "use client"
 
-import { useState } from "react"
+"use client"
+
+"use client"
+
+"use client"
+
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import { ArrowLeft, BookOpen, Users, FileText, Settings, Plus, Edit, Trash2 } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
@@ -9,89 +15,30 @@ import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Input } from "@/components/ui/input"
 
-// Mock data for courses
-const courses = [
-  {
-    id: 1,
-    name: "Data Structures & Algorithms",
-    code: "CS301",
-    students: 32,
-    documents: 45,
-    pendingReviews: 5,
-    description: "Comprehensive course covering fundamental data structures and algorithmic concepts.",
-    semester: "Fall 2024",
-    credits: 3,
-  },
-  {
-    id: 2,
-    name: "Database Systems",
-    code: "CS302",
-    students: 28,
-    documents: 38,
-    pendingReviews: 3,
-    description: "Introduction to database design, SQL, and database management systems.",
-    semester: "Fall 2024",
-    credits: 3,
-  },
-  {
-    id: 3,
-    name: "Software Engineering",
-    code: "CS401",
-    students: 25,
-    documents: 52,
-    pendingReviews: 4,
-    description: "Software development methodologies, project management, and best practices.",
-    semester: "Fall 2024",
-    credits: 4,
-  },
-  {
-    id: 4,
-    name: "Web Development",
-    code: "CS303",
-    students: 30,
-    documents: 41,
-    pendingReviews: 0,
-    description: "Modern web development technologies including HTML, CSS, JavaScript, and frameworks.",
-    semester: "Fall 2024",
-    credits: 3,
-  },
-]
-
-// Mock data for students
-const students = [
-  {
-    id: 1,
-    name: "Abebe Kebede",
-    studentId: "AASTU/2021/CS/001",
-    email: "abebe.kebede@aastu.edu.et",
-    courses: ["CS301", "CS302"],
-    submissions: 8,
-    lastActive: "2024-01-15",
-  },
-  {
-    id: 2,
-    name: "Hanan Mohammed",
-    studentId: "AASTU/2021/CS/045",
-    email: "hanan.mohammed@aastu.edu.et",
-    courses: ["CS302", "CS303"],
-    submissions: 6,
-    lastActive: "2024-01-14",
-  },
-  {
-    id: 3,
-    name: "Dawit Tadesse",
-    studentId: "AASTU/2020/CS/023",
-    email: "dawit.tadesse@aastu.edu.et",
-    courses: ["CS401"],
-    submissions: 12,
-    lastActive: "2024-01-13",
-  },
-]
-
 export default function TeacherManage() {
   const [activeTab, setActiveTab] = useState("courses")
   const [selectedCourse, setSelectedCourse] = useState<any>(null)
   const [isEditingCourse, setIsEditingCourse] = useState(false)
+  const [courses, setCourses] = useState([])
+  const [students, setStudents] = useState([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    loadData()
+  }, [])
+
+  const loadData = async () => {
+    try {
+      // In a real app, this would fetch from API
+      // For now, we'll set empty arrays
+      setCourses([])
+      setStudents([])
+    } catch (error) {
+      console.error('Error loading data:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">

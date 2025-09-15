@@ -48,9 +48,12 @@ export default function TeacherUpload() {
     category_id: "",
     document_type: "",
     year: new Date().getFullYear().toString(),
+    semester: "1",
+    academic_year: "",
     tags: "",
     accessLevel: "department",
   })
+  const [teacherDepartment, setTeacherDepartment] = useState<Department | null>(null)
   const [categories, setCategories] = useState<Category[]>([])
   const [departments, setDepartments] = useState<Department[]>([])
   const [tags, setTags] = useState<string[]>([])
@@ -63,44 +66,54 @@ export default function TeacherUpload() {
   }>({ type: null, message: '' })
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(event.target.files || [])
+    const files = event.target.files
+    if (!files || files.length === 0) {
+      setSelectedFiles([])
+      return
+    }
     
-    // Validate file size (5MB limit)
-    const validFiles = files.filter(file => {
-      if (file.size > 5 * 1024 * 1024) {
+    const fileArray = Array.from(files)
+    
+    // Validate file size (50MB limit)
+    const validFiles = fileArray.filter(file => {
+      if (file.size > 50 * 1024 * 1024) {
         setUploadStatus({
           type: 'error',
-          message: `File "${file.name}" is too large. Maximum size is 5MB.`
+          message: `File "${file.name}" is too large (${(file.size / (1024 * 1024)).toFixed(1)}MB). Maximum size is 50MB.`
         })
         return false
       }
       return true
     })
     
-    setSelectedFiles(validFiles) // Replace instead of append
+    setSelectedFiles(validFiles)
     setUploadStatus({ type: null, message: '' })
-    
-    // Clear the input value to allow selecting the same file again
-    event.target.value = ''
   }
 
   const handleFileDrop = (event: React.DragEvent<HTMLDivElement>) => {
     event.preventDefault()
-    const files = Array.from(event.dataTransfer.files)
+    const files = event.dataTransfer.files
     
-    // Validate file size (5MB limit)
-    const validFiles = files.filter(file => {
-      if (file.size > 5 * 1024 * 1024) {
+    if (!files || files.length === 0) {
+      setSelectedFiles([])
+      return
+    }
+    
+    const fileArray = Array.from(files)
+    
+    // Validate file size (50MB limit)
+    const validFiles = fileArray.filter(file => {
+      if (file.size > 50 * 1024 * 1024) {
         setUploadStatus({
           type: 'error',
-          message: `File "${file.name}" is too large. Maximum size is 5MB.`
+          message: `File "${file.name}" is too large (${(file.size / (1024 * 1024)).toFixed(1)}MB). Maximum size is 50MB.`
         })
         return false
       }
       return true
     })
     
-    setSelectedFiles(validFiles) // Replace instead of append
+    setSelectedFiles(validFiles)
     setUploadStatus({ type: null, message: '' })
   }
 
@@ -122,6 +135,7 @@ export default function TeacherUpload() {
   const removeTag = (tagToRemove: string) => {
     setTags((prev) => prev.filter((tag) => tag !== tagToRemove))
   }
+
 
   useEffect(() => {
     // Load user info from localStorage
@@ -171,6 +185,19 @@ export default function TeacherUpload() {
         if (departmentsResponse.success && departmentsResponse.data) {
           setDepartments(departmentsResponse.data)
           console.log('Departments loaded successfully:', departmentsResponse.data.length)
+          
+          // Set teacher's department automatically
+          const userInfo = localStorage.getItem('user_info')
+          if (userInfo) {
+            const userData = JSON.parse(userInfo)
+            if (userData.department_id) {
+              const teacherDept = departmentsResponse.data.find((dept: Department) => dept.id === userData.department_id)
+              if (teacherDept) {
+                setTeacherDepartment(teacherDept)
+                setFormData(prev => ({ ...prev, department_id: teacherDept.id.toString() }))
+              }
+            }
+          }
         } else {
           console.error('Departments failed:', departmentsResponse)
           setUploadStatus({
@@ -209,10 +236,33 @@ export default function TeacherUpload() {
     }
 
     // Validate required fields
-    if (!formData.title || !formData.author || !formData.department_id || !formData.category_id || !formData.document_type || !formData.year || selectedFiles.length === 0) {
+    if (!formData.title || !formData.author || !formData.department_id || !formData.category_id || !formData.document_type || !formData.semester || !formData.academic_year) {
+      console.log('Validation failed:', {
+        title: formData.title,
+        author: formData.author,
+        department_id: formData.department_id,
+        category_id: formData.category_id,
+        document_type: formData.document_type,
+        semester: formData.semester,
+        academic_year: formData.academic_year
+      })
       setUploadStatus({
         type: 'error',
         message: 'Please fill in all required fields'
+      })
+      setIsUploading(false)
+      return
+    }
+
+    // Additional validation for empty strings
+    if (!formData.title.trim() || !formData.author.trim() || 
+        !formData.department_id.toString().trim() || 
+        !formData.category_id.toString().trim() || 
+        !formData.document_type.trim() || !formData.semester.trim() || !formData.academic_year.trim()) {
+      console.log('Empty string validation failed')
+      setUploadStatus({
+        type: 'error',
+        message: 'Please fill in all required fields (no empty values)'
       })
       setIsUploading(false)
       return
@@ -228,25 +278,18 @@ export default function TeacherUpload() {
         return
       }
 
-      if (!formData.title || !formData.author || !formData.department_id || !formData.category_id || !formData.document_type) {
-        setUploadStatus({
-          type: 'error',
-          message: 'Please fill in all required fields'
-        })
-        setIsUploading(false)
-        return
-      }
-
       const formDataToSend = new FormData()
       
       // Add form fields
       formDataToSend.append('title', formData.title)
       formDataToSend.append('description', formData.description)
       formDataToSend.append('author', formData.author)
-              formDataToSend.append('department_id', formData.department_id.toString())
-        formDataToSend.append('category_id', formData.category_id.toString())
+      formDataToSend.append('department_id', formData.department_id.toString())
+      formDataToSend.append('category_id', formData.category_id.toString())
       formDataToSend.append('document_type', formData.document_type)
       formDataToSend.append('year', formData.year)
+      formDataToSend.append('semester', formData.semester)
+      formDataToSend.append('academic_year', formData.academic_year)
       formDataToSend.append('tags', tags.join(', '))
 
 
@@ -265,7 +308,9 @@ export default function TeacherUpload() {
 
       const response = await apiClient.uploadDocument(formDataToSend)
       
-      if (response.success) {
+      const isSuccess = response && response.success
+      
+      if (isSuccess) {
         setUploadStatus({
           type: 'success',
           message: 'Document uploaded successfully! It will be reviewed by the department.'
@@ -280,6 +325,8 @@ export default function TeacherUpload() {
           category_id: "",
           document_type: "",
           year: new Date().getFullYear().toString(),
+          semester: "1",
+          academic_year: "",
           tags: "",
           accessLevel: "department",
         })
@@ -361,7 +408,7 @@ export default function TeacherUpload() {
               <div className="ml-3">
                 <h3 className="text-sm font-medium text-blue-800">Upload Guidelines</h3>
                 <div className="mt-2 text-sm text-blue-700">
-                  <p>• Maximum file size: 5MB per document</p>
+                  <p>• Maximum file size: 50MB per document</p>
                   <p>• Supported formats: PDF, DOC, DOCX, PPT, PPTX, XLS, XLSX, TXT</p>
                   <p>• All uploads will be reviewed by department heads</p>
                 </div>
@@ -392,16 +439,16 @@ export default function TeacherUpload() {
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* File Upload Section */}
           <Card className="shadow-lg border-0 bg-white">
-            <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-blue-100">
-              <CardTitle className="flex items-center text-blue-900">
-                <Upload className="h-5 w-5 mr-2 text-blue-600" />
+            <CardHeader className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white">
+              <CardTitle className="text-white flex items-center">
+                <Upload className="h-5 w-5 mr-2" />
                 Select Files
               </CardTitle>
-              <CardDescription className="text-blue-700">
+              <CardDescription className="text-blue-100">
                 Upload documents for your courses. Supported formats: PDF, DOC, DOCX, PPT, PPTX, XLS, XLSX, TXT (Max: 5MB)
               </CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-6">
               <div
                 className="border-2 border-dashed border-blue-300 rounded-lg p-8 text-center hover:border-blue-500 hover:bg-blue-50 transition-all duration-200 cursor-pointer bg-blue-25"
                 onDrop={handleFileDrop}
@@ -410,35 +457,45 @@ export default function TeacherUpload() {
               >
                 <Upload className="h-12 w-12 text-blue-500 mx-auto mb-4" />
                 <p className="text-lg font-semibold text-gray-900 mb-2">Drop files here or click to browse</p>
-                <p className="text-sm text-gray-600 mb-4">Maximum file size: 5MB per file</p>
+                <p className="text-sm text-gray-600 mb-4">Maximum file size: 50MB per file</p>
                 <input
                   ref={fileInputRef}
                   type="file"
                   multiple
                   accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.txt"
                   onChange={handleFileSelect}
-                  className="sr-only"
-                  id="file-upload"
+                  className="block w-full text-sm text-gray-500 file:mr-4 file:py-3 file:px-6 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-600 file:text-white hover:file:bg-blue-700 file:cursor-pointer cursor-pointer"
                 />
-                <label 
-                  htmlFor="file-upload" 
-                  className="inline-flex items-center px-6 py-3 border border-blue-300 rounded-lg shadow-sm text-sm font-semibold text-blue-700 bg-white hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 cursor-pointer transition-colors duration-200"
-                >
-                  Choose Files
-                </label>
               </div>
 
               {/* Selected Files */}
+              <div className="mt-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                <p className="text-sm text-gray-500 text-center">
+                  Files selected: {selectedFiles.length}
+                  {selectedFiles.length > 0 && (
+                    <span className="block mt-2 text-green-600 font-medium">
+                      {selectedFiles.map(f => f.name).join(', ')}
+                    </span>
+                  )}
+                </p>
+              </div>
+              
               {selectedFiles.length > 0 && (
-                <div className="mt-6 space-y-3">
-                  <h4 className="font-medium text-gray-900">Selected Files ({selectedFiles.length})</h4>
+                <div className="mt-4 space-y-2">
                   {selectedFiles.map((file, index) => (
-                    <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    <div key={index} className="flex items-center justify-between p-3 bg-green-50 rounded-lg border border-green-200">
                       <div className="flex items-center space-x-3">
-                        <span className="text-gray-800">{file.name}</span>
-                        <span className="text-xs text-gray-500">({(file.size / 1024).toFixed(1)} KB)</span>
+                        <FileText className="h-4 w-4 text-green-600" />
+                        <span className="text-sm font-medium text-gray-900">{file.name}</span>
+                        <span className="text-xs text-gray-500">({formatFileSize(file.size)})</span>
                       </div>
-                      <Button type="button" variant="ghost" size="sm" onClick={() => removeFile(index)}>
+                      <Button 
+                        type="button" 
+                        variant="ghost" 
+                        size="sm" 
+                        onClick={() => removeFile(index)} 
+                        className="text-red-600 hover:text-red-700"
+                      >
                         <X className="h-4 w-4" />
                       </Button>
                     </div>
@@ -450,14 +507,14 @@ export default function TeacherUpload() {
 
           {/* Document Information */}
           <Card className="shadow-lg border-0 bg-white">
-            <CardHeader className="bg-gradient-to-r from-green-50 to-emerald-50 border-b border-green-100">
-              <CardTitle className="flex items-center text-green-900">
-                <FileText className="h-5 w-5 mr-2 text-green-600" />
+            <CardHeader className="bg-gradient-to-r from-green-600 to-emerald-600 text-white">
+              <CardTitle className="text-white flex items-center">
+                <FileText className="h-5 w-5 mr-2" />
                 Document Information
               </CardTitle>
-              <CardDescription className="text-green-700">Provide details about the document(s) you're uploading</CardDescription>
+              <CardDescription className="text-green-100">Provide details about the document(s) you're uploading</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-6">
+            <CardContent className="space-y-6 p-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Document Title *</label>
@@ -466,6 +523,7 @@ export default function TeacherUpload() {
                     value={formData.title}
                     onChange={(e) => setFormData((prev) => ({ ...prev, title: e.target.value }))}
                     required
+                    className="bg-white border-gray-300 focus:border-green-500 focus:ring-green-500"
                   />
                 </div>
 
@@ -476,44 +534,33 @@ export default function TeacherUpload() {
                     value={formData.author}
                     onChange={(e) => setFormData((prev) => ({ ...prev, author: e.target.value }))}
                     required
+                    className="bg-white border-gray-300 focus:border-green-500 focus:ring-green-500"
                   />
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Department *</label>
-                  <Select value={formData.department_id} onValueChange={(value) => setFormData((prev) => ({ ...prev, department_id: value }))}>
-                    <SelectTrigger className="w-full bg-white border-gray-300 focus:border-blue-500 focus:ring-blue-500">
-                      <SelectValue placeholder="Select department" />
-                    </SelectTrigger>
-                    <SelectContent className="select-content">
-                      {departments.length > 0 ? (
-                        departments.map((dept) => (
-                          <SelectItem key={dept.id} value={dept.id.toString()} className="select-item">
-                            {dept.name}
-                          </SelectItem>
-                        ))
-                      ) : (
-                        <SelectItem value="loading" disabled className="select-item">Loading departments...</SelectItem>
-                      )}
-                    </SelectContent>
-                  </Select>
+                  <div className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-gray-700">
+                    {teacherDepartment ? teacherDepartment.name : 'Loading...'}
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">Department is automatically set based on your profile</p>
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Category *</label>
                   <Select value={formData.category_id} onValueChange={(value) => setFormData((prev) => ({ ...prev, category_id: value }))}>
-                    <SelectTrigger className="w-full bg-white border-gray-300 focus:border-blue-500 focus:ring-blue-500">
+                    <SelectTrigger className="w-full bg-white border-gray-300 focus:border-green-500 focus:ring-green-500">
                       <SelectValue placeholder="Select category" />
                     </SelectTrigger>
-                    <SelectContent className="select-content">
+                    <SelectContent className="bg-white border-gray-300">
                       {categories.length > 0 ? (
                         categories.map((cat) => (
-                          <SelectItem key={cat.id} value={cat.id.toString()} className="select-item">
+                          <SelectItem key={cat.id} value={cat.id.toString()}>
                             {cat.name}
                           </SelectItem>
                         ))
                       ) : (
-                        <SelectItem value="loading" disabled className="select-item">Loading categories...</SelectItem>
+                        <SelectItem value="loading" disabled>Loading categories...</SelectItem>
                       )}
                     </SelectContent>
                   </Select>
@@ -522,18 +569,18 @@ export default function TeacherUpload() {
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Document Type *</label>
                   <Select value={formData.document_type} onValueChange={(value) => setFormData((prev) => ({ ...prev, document_type: value }))}>
-                    <SelectTrigger className="w-full bg-white border-gray-300 focus:border-blue-500 focus:ring-blue-500">
+                    <SelectTrigger className="w-full bg-white border-gray-300 focus:border-green-500 focus:ring-green-500">
                       <SelectValue placeholder="Select document type" />
                     </SelectTrigger>
-                    <SelectContent className="select-content">
-                      <SelectItem value="lecture_notes" className="select-item">Lecture Notes</SelectItem>
-                      <SelectItem value="assignment" className="select-item">Assignment</SelectItem>
-                      <SelectItem value="lab_manual" className="select-item">Lab Manual</SelectItem>
-                      <SelectItem value="reference_material" className="select-item">Reference Material</SelectItem>
-                      <SelectItem value="exam_paper" className="select-item">Exam Paper</SelectItem>
-                      <SelectItem value="project_guidelines" className="select-item">Project Guidelines</SelectItem>
-                      <SelectItem value="course_syllabus" className="select-item">Course Syllabus</SelectItem>
-                      <SelectItem value="other" className="select-item">Other</SelectItem>
+                    <SelectContent className="bg-white border-gray-300">
+                      <SelectItem value="lecture_notes">Lecture Notes</SelectItem>
+                      <SelectItem value="assignment">Assignment</SelectItem>
+                      <SelectItem value="lab_manual">Lab Manual</SelectItem>
+                      <SelectItem value="reference_material">Reference Material</SelectItem>
+                      <SelectItem value="exam_paper">Exam Paper</SelectItem>
+                      <SelectItem value="project_guidelines">Project Guidelines</SelectItem>
+                      <SelectItem value="course_syllabus">Course Syllabus</SelectItem>
+                      <SelectItem value="other">Other</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -548,7 +595,44 @@ export default function TeacherUpload() {
                     min="1900"
                     max={new Date().getFullYear()}
                     required
+                    className="bg-white border-gray-300 focus:border-green-500 focus:ring-green-500"
                   />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Semester *</label>
+                  <Select value={formData.semester} onValueChange={(value) => setFormData((prev) => ({ ...prev, semester: value }))}>
+                    <SelectTrigger className="w-full bg-white border-gray-300 focus:border-green-500 focus:ring-green-500">
+                      <SelectValue placeholder="Select semester" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-white border-gray-300">
+                      <SelectItem value="1">Semester 1</SelectItem>
+                      <SelectItem value="2">Semester 2</SelectItem>
+                      <SelectItem value="Summer">Summer</SelectItem>
+                      <SelectItem value="Winter">Winter</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Academic Year *</label>
+                  <Select value={formData.academic_year} onValueChange={(value) => setFormData((prev) => ({ ...prev, academic_year: value }))}>
+                    <SelectTrigger className="w-full bg-white border-gray-300 focus:border-green-500 focus:ring-green-500">
+                      <SelectValue placeholder="Select academic year" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-white border-gray-300">
+                      <SelectItem value="1st Year">1st Year</SelectItem>
+                      <SelectItem value="2nd Year">2nd Year</SelectItem>
+                      <SelectItem value="3rd Year">3rd Year</SelectItem>
+                      <SelectItem value="4th Year">4th Year</SelectItem>
+                      <SelectItem value="5th Year">5th Year</SelectItem>
+                      <SelectItem value="Final Year">Final Year</SelectItem>
+                      <SelectItem value="Graduate">Graduate</SelectItem>
+                      <SelectItem value="Post Graduate">Post Graduate</SelectItem>
+                      <SelectItem value="PhD">PhD</SelectItem>
+                      <SelectItem value="General">General</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
 
@@ -559,6 +643,7 @@ export default function TeacherUpload() {
                   value={formData.description}
                   onChange={(e) => setFormData((prev) => ({ ...prev, description: e.target.value }))}
                   rows={3}
+                  className="bg-white border-gray-300 focus:border-green-500 focus:ring-green-500"
                 />
               </div>
 
@@ -570,15 +655,16 @@ export default function TeacherUpload() {
                     onChange={(e) => setCurrentTag(e.target.value)}
                     placeholder="Add a tag"
                     onKeyPress={(e) => e.key === "Enter" && (e.preventDefault(), addTag())}
+                    className="bg-white border-gray-300 focus:border-green-500 focus:ring-green-500"
                   />
-                  <Button type="button" onClick={addTag} variant="outline">
+                  <Button type="button" onClick={addTag} variant="outline" className="bg-white hover:bg-gray-50 border-gray-300">
                     <Plus className="h-4 w-4" />
                   </Button>
                 </div>
                 {tags.length > 0 && (
                   <div className="flex flex-wrap gap-2">
                     {tags.map((tag) => (
-                      <Badge key={tag} variant="secondary" className="cursor-pointer" onClick={() => removeTag(tag)}>
+                      <Badge key={tag} variant="secondary" className="cursor-pointer bg-green-100 text-green-800 border-green-200" onClick={() => removeTag(tag)}>
                         {tag} <X className="h-3 w-3 ml-1" />
                       </Badge>
                     ))}
@@ -589,18 +675,18 @@ export default function TeacherUpload() {
           </Card>
 
           {/* Submit Section */}
-          <Card>
-            <CardContent className="pt-6">
+          <Card className="shadow-lg border-0 bg-white">
+            <CardContent className="pt-6 p-6">
               {selectedFiles.length === 0 && (
-                <Alert className="mb-4">
-                  <AlertCircle className="h-4 w-4" />
-                  <AlertDescription>Please select at least one file to upload.</AlertDescription>
+                <Alert className="mb-4 border-yellow-200 bg-yellow-50">
+                  <AlertCircle className="h-4 w-4 text-yellow-600" />
+                  <AlertDescription className="text-yellow-800">Please select at least one file to upload.</AlertDescription>
                 </Alert>
               )}
 
               <div className="flex justify-end space-x-4">
                 <Link href="/teacher/dashboard">
-                  <Button type="button" variant="outline">
+                  <Button type="button" variant="outline" className="bg-white hover:bg-gray-50 border-gray-300">
                     Cancel
                   </Button>
                 </Link>
@@ -613,9 +699,11 @@ export default function TeacherUpload() {
                     !formData.department_id ||
                     !formData.category_id ||
                     !formData.document_type ||
+                    !formData.semester ||
+                    !formData.academic_year ||
                     isUploading
                   }
-                  className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold py-3 px-6 rounded-lg shadow-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-semibold py-3 px-6 rounded-lg shadow-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {isUploading ? (
                     <>

@@ -1,17 +1,40 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
-import { BookOpen, Users, FileText, Search, Download, ArrowLeft, Calendar, Clock, Award } from "lucide-react"
-import Link from "next/link"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { BookOpen, Search, Filter, User, Calendar, Award, Mail, Plus } from "lucide-react"
 import PageHeader from "@/components/PageHeader"
 import Footer from "@/components/Footer"
+import { apiClient } from "@/lib/api"
 
-export default function CourseManagement() {
-  const [searchTerm, setSearchTerm] = useState("")
+interface Course {
+  id: number
+  course_code: string
+  course_name: string
+  description: string
+  credits: number
+  level: string
+  semester: string
+  academic_year: number
+  teacher?: {
+    id: number
+    name: string
+    email: string
+  }
+  department?: {
+    id: number
+    name: string
+  }
+  is_active: boolean
+  created_at: string
+  updated_at: string
+}
+
+export default function DepartmentCourses() {
   const [user, setUser] = useState<{
     id: number
     name: string
@@ -21,9 +44,19 @@ export default function CourseManagement() {
     student_id?: string
     department_id?: number
   } | null>(null)
+  const [courses, setCourses] = useState<Course[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [searchTerm, setSearchTerm] = useState("")
+  const [levelFilter, setLevelFilter] = useState<string>("all")
+  const [semesterFilter, setSemesterFilter] = useState<string>("all")
 
-  // Load user data
   useEffect(() => {
+    loadUserData()
+    loadCourses()
+  }, [])
+
+  const loadUserData = () => {
     const userInfo = localStorage.getItem('user_info')
     if (userInfo) {
       try {
@@ -33,206 +66,264 @@ export default function CourseManagement() {
         console.error('Error parsing user info:', error)
       }
     }
-  }, [])
+  }
 
-  const courses = [
-    {
-      id: 1,
-      code: "CS 401",
-      title: "Advanced Database Systems",
-      instructor: "Dr. Sarah Johnson",
-      enrolledStudents: 45,
-      materials: 12,
-      status: "active",
-      semester: "Spring 2024",
-      credits: 3,
-      schedule: "Mon, Wed, Fri 10:00-11:00",
-    },
-    {
-      id: 2,
-      code: "CS 402",
-      title: "Machine Learning",
-      instructor: "Prof. Michael Chen",
-      enrolledStudents: 38,
-      materials: 18,
-      status: "active",
-      semester: "Spring 2024",
-      credits: 4,
-      schedule: "Tue, Thu 14:00-16:00",
-    },
-    {
-      id: 3,
-      code: "CS 403",
-      title: "Software Engineering",
-      instructor: "Dr. Emily Davis",
-      enrolledStudents: 52,
-      materials: 8,
-      status: "pending_review",
-      semester: "Spring 2024",
-      credits: 3,
-      schedule: "Mon, Wed 16:00-17:30",
-    },
-    {
-      id: 4,
-      code: "CS 301",
-      title: "Data Structures and Algorithms",
-      instructor: "Dr. James Wilson",
-      enrolledStudents: 67,
-      materials: 15,
-      status: "active",
-      semester: "Spring 2024",
-      credits: 4,
-      schedule: "Tue, Thu 10:00-12:00",
-    },
-    {
-      id: 5,
-      code: "CS 404",
-      title: "Computer Networks",
-      instructor: "Prof. Lisa Anderson",
-      enrolledStudents: 41,
-      materials: 22,
-      status: "active",
-      semester: "Spring 2024",
-      credits: 3,
-      schedule: "Wed, Fri 14:00-15:30",
-    },
-  ]
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "active":
-        return "bg-green-100 text-green-800"
-      case "pending_review":
-        return "bg-yellow-100 text-yellow-800"
-      case "inactive":
-        return "bg-gray-100 text-gray-800"
-      default:
-        return "bg-gray-100 text-gray-800"
+  const loadCourses = async () => {
+    setLoading(true)
+    setError(null)
+    try {
+      const response = await apiClient.getDepartmentCourses()
+      if (response.success) {
+        setCourses(response.data || [])
+      } else {
+        setError(response.message || 'Failed to load courses')
+      }
+    } catch (error) {
+      console.error('Error loading courses:', error)
+      setError('Failed to load courses')
+    } finally {
+      setLoading(false)
     }
+  }
+
+  const filteredCourses = courses.filter(course => {
+    const matchesSearch = course.course_code.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         course.course_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         course.description.toLowerCase().includes(searchTerm.toLowerCase())
+    const matchesLevel = levelFilter === "all" || course.level === levelFilter
+    const matchesSemester = semesterFilter === "all" || course.semester === semesterFilter
+    
+    return matchesSearch && matchesLevel && matchesSemester
+  })
+
+  const getLevelColor = (level: string) => {
+    switch (level) {
+      case 'undergraduate': return 'bg-blue-100 text-blue-800'
+      case 'graduate': return 'bg-green-100 text-green-800'
+      case 'phd': return 'bg-purple-100 text-purple-800'
+      default: return 'bg-gray-100 text-gray-800'
+    }
+  }
+
+  const getSemesterColor = (semester: string) => {
+    switch (semester) {
+      case '1': return 'bg-orange-100 text-orange-800'
+      case '2': return 'bg-yellow-100 text-yellow-800'
+      case 'summer': return 'bg-cyan-100 text-cyan-800'
+      default: return 'bg-gray-100 text-gray-800'
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading courses...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-red-500 text-6xl mb-4">⚠️</div>
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">Error Loading Courses</h2>
+          <p className="text-gray-600 mb-4">{error}</p>
+          <Button onClick={loadCourses} className="bg-blue-600 hover:bg-blue-700">
+            Try Again
+          </Button>
+        </div>
+      </div>
+    )
   }
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
       <PageHeader
-        title="Course Management"
-        subtitle="Manage department courses"
+        title="Department Courses"
+        subtitle="Manage and view department courses"
         backUrl="/department/dashboard"
         user={user}
       />
-
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Search */}
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-2xl font-bold text-gray-900">Department Courses</h2>
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-            <Input
-              placeholder="Search courses..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 w-64"
-            />
+      
+      {/* Header */}
+      <div className="bg-white shadow-sm border-b">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900">Department Courses</h1>
+              <p className="text-gray-600 mt-1">View and manage all courses in your department</p>
+            </div>
+            <Button className="bg-blue-600 hover:bg-blue-700">
+              <Plus className="w-4 h-4 mr-2" />
+              Add Course
+            </Button>
           </div>
         </div>
+      </div>
 
-        {/* Courses Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-          {courses.map((course) => (
-            <Card key={course.id} className="hover:shadow-md transition-shadow">
-              <CardHeader>
-                <div className="flex justify-between items-start">
-                  <div>
-                    <CardTitle className="text-lg">{course.title}</CardTitle>
-                    <CardDescription className="flex items-center mt-1">
-                      <Award className="h-4 w-4 mr-1" />
-                      {course.code} - {course.instructor}
-                    </CardDescription>
-                  </div>
-                  <Badge className={getStatusColor(course.status)}>{course.status.replace("_", " ")}</Badge>
+      {/* Filters and Search */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Filter className="w-5 h-5" />
+              Filters & Search
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Search</label>
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                  <Input
+                    placeholder="Search courses..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-10"
+                  />
                 </div>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-600 flex items-center">
-                      <Users className="h-4 w-4 mr-1" />
-                      Enrolled Students
-                    </span>
-                    <span className="font-medium">{course.enrolledStudents}</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-600 flex items-center">
-                      <FileText className="h-4 w-4 mr-1" />
-                      Course Materials
-                    </span>
-                    <span className="font-medium">{course.materials} documents</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-600 flex items-center">
-                      <BookOpen className="h-4 w-4 mr-1" />
-                      Credits
-                    </span>
-                    <span className="font-medium">{course.credits}</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-600 flex items-center">
-                      <Calendar className="h-4 w-4 mr-1" />
-                      Semester
-                    </span>
-                    <span className="font-medium">{course.semester}</span>
-                  </div>
-                  <div className="pt-2 border-t">
-                    <div className="flex items-center text-sm text-gray-600">
-                      <Clock className="h-4 w-4 mr-1" />
-                      {course.schedule}
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Level</label>
+                <Select value={levelFilter} onValueChange={setLevelFilter}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="All Levels" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Levels</SelectItem>
+                    <SelectItem value="undergraduate">Undergraduate</SelectItem>
+                    <SelectItem value="graduate">Graduate</SelectItem>
+                    <SelectItem value="phd">PhD</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Semester</label>
+                <Select value={semesterFilter} onValueChange={setSemesterFilter}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="All Semesters" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Semesters</SelectItem>
+                    <SelectItem value="1">Semester 1</SelectItem>
+                    <SelectItem value="2">Semester 2</SelectItem>
+                    <SelectItem value="summer">Summer</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Courses List */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-8">
+        {filteredCourses.length === 0 ? (
+          <Card>
+            <CardContent className="py-12 text-center">
+              <BookOpen className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 mb-2">No courses found</h3>
+              <p className="text-gray-600 mb-4">
+                {searchTerm || levelFilter !== "all" || semesterFilter !== "all" 
+                  ? "Try adjusting your filters or search terms"
+                  : "There are no courses in your department yet"}
+              </p>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="grid gap-6">
+            {filteredCourses.map((course) => (
+              <Card key={course.id} className="hover:shadow-md transition-shadow">
+                <CardContent className="p-6">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-3 mb-2">
+                        <h3 className="text-xl font-semibold text-gray-900">{course.course_name}</h3>
+                        <Badge className="bg-blue-100 text-blue-800">
+                          {course.course_code}
+                        </Badge>
+                        <Badge className={getLevelColor(course.level)}>
+                          {course.level.charAt(0).toUpperCase() + course.level.slice(1)}
+                        </Badge>
+                        <Badge className={getSemesterColor(course.semester)}>
+                          Semester {course.semester}
+                        </Badge>
+                        {course.is_active ? (
+                          <Badge className="bg-green-100 text-green-800">Active</Badge>
+                        ) : (
+                          <Badge className="bg-gray-100 text-gray-800">Inactive</Badge>
+                        )}
+                      </div>
+                      
+                      <div className="flex items-center space-x-4 text-sm text-gray-600 mb-2">
+                        <span className="flex items-center">
+                          <Award className="h-4 w-4 mr-1" />
+                          {course.credits} Credits
+                        </span>
+                        <span className="flex items-center">
+                          <Calendar className="h-4 w-4 mr-1" />
+                          Year {course.academic_year}
+                        </span>
+                        {course.teacher && (
+                          <span className="flex items-center">
+                            <User className="h-4 w-4 mr-1" />
+                            {course.teacher.name}
+                          </span>
+                        )}
+                      </div>
+                      
+                      {course.description && (
+                        <p className="text-sm text-gray-600 mb-3">{course.description}</p>
+                      )}
+                      
+                      {course.teacher && (
+                        <div className="flex items-center space-x-2 text-sm">
+                          <Mail className="h-4 w-4 text-gray-400" />
+                          <a 
+                            href={`mailto:${course.teacher.email}`}
+                            className="text-blue-600 hover:text-blue-800 underline"
+                          >
+                            {course.teacher.email}
+                          </a>
+                        </div>
+                      )}
+                    </div>
+                    
+                    <div className="flex flex-col gap-2 ml-4">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200"
+                      >
+                        <BookOpen className="w-4 h-4 mr-1" />
+                        View Details
+                      </Button>
+                      
+                      {course.teacher && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="bg-green-50 hover:bg-green-100 text-green-700 border-green-200"
+                          onClick={() => window.open(`mailto:${course.teacher.email}`, '_blank')}
+                        >
+                          <Mail className="w-4 h-4 mr-1" />
+                          Email Teacher
+                        </Button>
+                      )}
                     </div>
                   </div>
-                  <div className="flex space-x-2 pt-2">
-                    <Button variant="outline" size="sm" className="flex-1 bg-transparent">
-                      View Details
-                    </Button>
-                    <Button variant="outline" size="sm" className="flex-1 bg-transparent">
-                      Manage
-                    </Button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-
-        {/* Course Statistics */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-          <Card>
-            <CardContent className="p-6 text-center">
-              <BookOpen className="h-8 w-8 text-blue-600 mx-auto mb-2" />
-              <p className="text-2xl font-bold text-blue-600">45</p>
-              <p className="text-sm text-gray-600">Total Courses</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-6 text-center">
-              <Users className="h-8 w-8 text-green-600 mx-auto mb-2" />
-              <p className="text-2xl font-bold text-green-600">1,247</p>
-              <p className="text-sm text-gray-600">Total Students</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-6 text-center">
-              <FileText className="h-8 w-8 text-purple-600 mx-auto mb-2" />
-              <p className="text-2xl font-bold text-purple-600">875</p>
-              <p className="text-sm text-gray-600">Course Materials</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-6 text-center">
-              <Award className="h-8 w-8 text-orange-600 mx-auto mb-2" />
-              <p className="text-2xl font-bold text-orange-600">3.2</p>
-              <p className="text-sm text-gray-600">Avg. Credits</p>
-            </CardContent>
-          </Card>
-        </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
       </div>
       
       <Footer />

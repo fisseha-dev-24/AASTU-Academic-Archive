@@ -13,8 +13,8 @@ return new class extends Migration
     {
         Schema::create('document_analytics', function (Blueprint $table) {
             $table->id();
-            $table->unsignedBigInteger('document_id');
-            $table->unsignedBigInteger('user_id')->nullable(); // Who performed the action
+            $table->unsignedBigInteger('document_id')->index();
+            $table->unsignedBigInteger('user_id')->nullable()->index(); // Who performed the action
             $table->enum('action', ['view', 'download', 'preview', 'search_result', 'favorite', 'share']);
             $table->string('ip_address')->nullable();
             $table->string('user_agent')->nullable();
@@ -22,8 +22,7 @@ return new class extends Migration
             $table->json('metadata')->nullable(); // Additional data like search terms, filters used
             $table->timestamp('created_at')->useCurrent();
             
-            $table->foreign('document_id')->references('id')->on('documents')->onDelete('cascade');
-            $table->foreign('user_id')->references('id')->on('users')->onDelete('set null');
+            
             
             $table->index(['document_id', 'action', 'created_at']);
             $table->index(['user_id', 'created_at']);

@@ -82,14 +82,13 @@ class DocumentController extends Controller
         // Check if user has access to this document
         $user = Auth::user();
         
-        // Department heads can preview any document in their department
-        if ($user->role === 'department_head') {
-            if ($document->department_id !== $user->department_id) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Access denied'
-                ], 403);
-            }
+        // College deans can preview any document
+        if ($user->role === 'college_dean') {
+            // No restrictions for deans
+        }
+        // Department heads can preview any document
+        elseif ($user->role === 'department_head') {
+            // No restrictions for department heads
         }
         // Teachers can preview their own documents
         elseif ($user->role === 'teacher') {
@@ -155,14 +154,13 @@ class DocumentController extends Controller
         // Check if user has access to this document
         $user = Auth::user();
         
-        // Department heads can download any document in their department
-        if ($user->role === 'department_head') {
-            if ($document->department_id !== $user->department_id) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Access denied'
-                ], 403);
-            }
+        // College deans can download any document
+        if ($user->role === 'college_dean') {
+            // No restrictions for deans
+        }
+        // Department heads can download any document
+        elseif ($user->role === 'department_head') {
+            // No restrictions for department heads
         }
         // Teachers can download their own documents
         elseif ($user->role === 'teacher') {
@@ -202,10 +200,19 @@ class DocumentController extends Controller
 
         // Get file info
         $fileName = basename($document->file_path);
-        $originalFileName = $document->title . '.' . pathinfo($document->file_path, PATHINFO_EXTENSION);
+        $originalFileName = $document->title;
+        
+        // If the title already has an extension, use it as is
+        if (pathinfo($originalFileName, PATHINFO_EXTENSION)) {
+            $downloadFileName = $originalFileName;
+        } else {
+            // Otherwise, add the file extension
+            $fileExtension = pathinfo($document->file_path, PATHINFO_EXTENSION);
+            $downloadFileName = $originalFileName . '.' . $fileExtension;
+        }
         
         // Clean filename for download
-        $downloadFileName = preg_replace('/[^a-zA-Z0-9._-]/', '_', $originalFileName);
+        $downloadFileName = preg_replace('/[^a-zA-Z0-9._-]/', '_', $downloadFileName);
 
         return Storage::disk('public')->download($document->file_path, $downloadFileName);
     }
@@ -479,6 +486,30 @@ class DocumentController extends Controller
     }
 
     /**
+     * Track document view (for route /track/view)
+     */
+    public function trackView(Request $request): JsonResponse
+    {
+        return $this->trackDocumentView($request);
+    }
+
+    /**
+     * Track document download (for route /track/download)
+     */
+    public function trackDownload(Request $request): JsonResponse
+    {
+        return $this->trackDocumentDownload($request);
+    }
+
+    /**
+     * Track search (for route /track/search)
+     */
+    public function trackSearch(Request $request): JsonResponse
+    {
+        return $this->trackSearchActivity($request);
+    }
+
+    /**
      * Track document view
      */
     public function trackDocumentView(Request $request): JsonResponse
@@ -551,7 +582,7 @@ class DocumentController extends Controller
     /**
      * Track search activity
      */
-    public function trackSearch(Request $request): JsonResponse
+    public function trackSearchActivity(Request $request): JsonResponse
     {
         $validator = Validator::make($request->all(), [
             'search_term' => 'required|string|max:255',
@@ -589,6 +620,87 @@ class DocumentController extends Controller
     }
 
     /**
+     * Format file size in human readable format
+     */
+    private function formatFileSize($bytes)
+    {
+        if ($bytes >= 1073741824) {
+            return number_format($bytes / 1073741824, 2) . ' GB';
+        } elseif ($bytes >= 1048576) {
+            return number_format($bytes / 1048576, 2) . ' MB';
+        } elseif ($bytes >= 1024) {
+            return number_format($bytes / 1024, 2) . ' KB';
+        } else {
+            return $bytes . ' bytes';
+        }
+    }
+
+    /**
+     * Get filter options for advanced search
+     */
+    public function getFilterOptions(): JsonResponse
+    {
+        try {
+            // Get all departments
+            $departments = \App\Models\Department::orderBy('name')->pluck('name')->toArray();
+            
+            // Get all document types from existing documents
+            $documentTypes = Document::distinct()->pluck('document_type')->filter()->sort()->values()->toArray();
+            
+            // Get all years from existing documents
+            $years = Document::distinct()->pluck('year')->filter()->sort()->values()->toArray();
+            
+            // Get all authors (users who uploaded documents)
+            $authors = Document::with('user')
+                ->whereHas('user')
+                ->get()
+                ->pluck('user.name')
+                ->filter()
+                ->unique()
+                ->sort()
+                ->values()
+                ->toArray();
+            
+            // Get all keywords from existing documents
+            $keywords = Document::whereNotNull('keywords')
+                ->pluck('keywords')
+                ->flatMap(function($keywords) {
+                    return is_string($keywords) ? json_decode($keywords, true) : [];
+                })
+                ->filter()
+                ->unique()
+                ->sort()
+                ->values()
+                ->toArray();
+
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'colleges' => [
+                        'College of Engineering',
+                        'College of Science', 
+                        'College of Technology'
+                    ],
+                    'departments' => $departments,
+                    'documentTypes' => $documentTypes,
+                    'years' => $years,
+                    'semesters' => ['Fall', 'Spring', 'Summer'],
+                    'academicYears' => ['2023-2024', '2022-2023', '2021-2022', '2020-2021'],
+                    'languages' => ['English', 'Amharic', 'French', 'German'],
+                    'fileFormats' => ['PDF', 'DOC', 'DOCX', 'PPT', 'PPTX', 'XLS', 'XLSX'],
+                    'authors' => $authors
+                ]
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to load filter options',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
      * Search and filter documents for browse page
      */
     public function searchDocuments(Request $request): JsonResponse
@@ -597,12 +709,19 @@ class DocumentController extends Controller
             'search_query' => 'nullable|string|max:255',
             'document_type' => 'nullable|string',
             'department' => 'nullable|string',
+            'college' => 'nullable|string',
             'year' => 'nullable|string',
+            'semester' => 'nullable|string',
+            'academic_year' => 'nullable|string',
+            'language' => 'nullable|string',
+            'file_format' => 'nullable|string',
             'author' => 'nullable|string',
             'keywords' => 'nullable|array',
             'min_downloads' => 'nullable|integer',
             'max_downloads' => 'nullable|integer',
-            'sort_by' => 'nullable|string|in:date-desc,date-asc,downloads-desc,downloads-asc,title-asc,title-desc,author-asc',
+            'min_rating' => 'nullable|numeric|min:0|max:5',
+            'max_rating' => 'nullable|numeric|min:0|max:5',
+            'sort_by' => 'nullable|string|in:date-desc,date-asc,downloads-desc,downloads-asc,title-asc,title-desc,author-asc,rating-desc,views-desc',
         ]);
 
         if ($validator->fails()) {
@@ -622,30 +741,95 @@ class DocumentController extends Controller
             $query->where(function($q) use ($searchTerm) {
                 $q->where('title', 'like', "%{$searchTerm}%")
                   ->orWhere('description', 'like', "%{$searchTerm}%")
+                  ->orWhere('author', 'like', "%{$searchTerm}%")
                   ->orWhereHas('user', function($userQuery) use ($searchTerm) {
                       $userQuery->where('name', 'like', "%{$searchTerm}%");
                   });
             });
         }
 
-        if ($request->document_type && $request->document_type !== 'all') {
-            $query->where('document_type', $request->document_type);
+        // College filter (if implemented in departments table)
+        if ($request->college && $request->college !== 'all') {
+            // This would need a college_id field in departments table
+            // For now, we'll skip this filter
         }
 
+        // Department filter
         if ($request->department && $request->department !== 'all') {
             $query->whereHas('department', function($deptQuery) use ($request) {
                 $deptQuery->where('name', 'like', "%{$request->department}%");
             });
         }
 
+        // Document type filter
+        if ($request->document_type && $request->document_type !== 'all') {
+            $query->where('document_type', $request->document_type);
+        }
+
+        // Year filter
         if ($request->year && $request->year !== 'all') {
             $query->where('year', $request->year);
         }
 
+        // Semester filter (if implemented)
+        if ($request->semester && $request->semester !== 'all') {
+            // This would need a semester field in documents table
+            // For now, we'll skip this filter
+        }
+
+        // Academic year filter (if implemented)
+        if ($request->academic_year && $request->academic_year !== 'all') {
+            // This would need an academic_year field in documents table
+            // For now, we'll skip this filter
+        }
+
+        // Language filter (if implemented)
+        if ($request->language && $request->language !== 'all') {
+            // This would need a language field in documents table
+            // For now, we'll skip this filter
+        }
+
+        // File format filter (if implemented)
+        if ($request->file_format && $request->file_format !== 'all') {
+            // This would need a file_format field in documents table
+            // For now, we'll skip this filter
+        }
+
+        // Author filter
         if ($request->author) {
-            $query->whereHas('user', function($userQuery) use ($request) {
-                $userQuery->where('name', 'like', "%{$request->author}%");
+            $query->where(function($q) use ($request) {
+                $q->where('author', 'like', "%{$request->author}%")
+                  ->orWhereHas('user', function($userQuery) use ($request) {
+                      $userQuery->where('name', 'like', "%{$request->author}%");
+                  });
             });
+        }
+
+        // Keywords filter
+        if ($request->keywords && is_array($request->keywords) && count($request->keywords) > 0) {
+            $query->where(function($q) use ($request) {
+                foreach ($request->keywords as $keyword) {
+                    $q->where('keywords', 'like', "%{$keyword}%");
+                }
+            });
+        }
+
+        // Download range filter
+        if ($request->min_downloads) {
+            $query->where('downloads', '>=', $request->min_downloads);
+        }
+        if ($request->max_downloads) {
+            $query->where('downloads', '<=', $request->max_downloads);
+        }
+
+        // Rating range filter (if implemented)
+        if ($request->min_rating) {
+            // This would need a rating field in documents table
+            // For now, we'll skip this filter
+        }
+        if ($request->max_rating) {
+            // This would need a rating field in documents table
+            // For now, we'll skip this filter
         }
 
         // Apply sorting
@@ -656,6 +840,12 @@ class DocumentController extends Controller
             case 'date-asc':
                 $query->orderBy('created_at', 'asc');
                 break;
+            case 'downloads-desc':
+                $query->orderBy('downloads', 'desc');
+                break;
+            case 'downloads-asc':
+                $query->orderBy('downloads', 'asc');
+                break;
             case 'title-asc':
                 $query->orderBy('title', 'asc');
                 break;
@@ -663,7 +853,14 @@ class DocumentController extends Controller
                 $query->orderBy('title', 'desc');
                 break;
             case 'author-asc':
-                $query->orderBy('user_id', 'asc');
+                $query->orderBy('author', 'asc');
+                break;
+            case 'rating-desc':
+                // This would need a rating field in documents table
+                $query->orderBy('created_at', 'desc');
+                break;
+            case 'views-desc':
+                $query->orderBy('views', 'desc');
                 break;
             default:
                 $query->orderBy('created_at', 'desc');
@@ -675,16 +872,20 @@ class DocumentController extends Controller
             return [
                 'id' => $document->id,
                 'title' => $document->title,
-                'author' => $document->user->name,
+                'author' => $document->author ?? $document->user->name,
                 'department' => $document->department->name ?? 'Unknown',
                 'type' => $document->document_type,
                 'date' => $document->created_at->format('Y-m-d'),
                 'year' => $document->year,
-                'downloads' => 0, // Would come from download tracking
+                'downloads' => $document->downloads ?? 0,
+                'views' => $document->views ?? 0,
                 'description' => $document->description ?? '',
-                'keywords' => $document->keywords ? explode(',', $document->keywords) : [],
-                'fileSize' => '1.5 MB', // Would come from file metadata
+                'keywords' => $document->keywords ? (is_string($document->keywords) ? json_decode($document->keywords, true) : []) : [],
+                'fileSize' => $document->file_size ? $this->formatFileSize($document->file_size) : 'Unknown',
                 'pages' => 0, // Would come from file metadata
+                'file_format' => $document->file_type ? pathinfo($document->file_type, PATHINFO_EXTENSION) : 'Unknown',
+                'approval_status' => $document->status,
+                'rating' => 0, // Would come from ratings table
             ];
         });
 
@@ -1039,5 +1240,123 @@ class DocumentController extends Controller
             'success' => true,
             'message' => 'Profile updated successfully'
         ]);
+    }
+
+    /**
+     * Update document status (for department heads)
+     */
+    public function updateDocumentStatus($documentId, Request $request): JsonResponse
+    {
+        try {
+            $user = Auth::user();
+            
+            if ($user->role !== 'department_head' && $user->role !== 'college_dean' && $user->role !== 'admin' && $user->role !== 'it_manager') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Access denied. Department head privileges required.'
+                ], 403);
+            }
+
+            $validator = Validator::make($request->all(), [
+                'status' => 'required|in:pending,approved,rejected',
+            ]);
+
+            if ($validator->fails()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Validation failed',
+                    'errors' => $validator->errors()
+                ], 422);
+            }
+
+            $document = Document::findOrFail($documentId);
+            $document->update(['status' => $request->status]);
+
+            // Log the status change
+            AuditLog::create([
+                'user_id' => $user->id,
+                'document_id' => $document->id,
+                'action' => 'status_update',
+                'details' => "Document status changed to {$request->status}",
+                'ip_address' => $request->ip(),
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Document status updated successfully',
+                'data' => $document
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to update document status',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Delete a document
+     */
+    public function deleteDocument($documentId): JsonResponse
+    {
+        try {
+            $user = Auth::user();
+            $document = Document::findOrFail($documentId);
+            
+            // Check permissions
+            if ($user->role === 'admin' || $user->role === 'it_manager' || $user->role === 'college_dean') {
+                // Admins, IT managers, and deans can delete any document
+            } elseif ($user->role === 'department_head') {
+                // Department heads can delete documents from their department
+                if ($document->department_id !== $user->department_id) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Access denied. You can only delete documents from your department.'
+                    ], 403);
+                }
+            } elseif ($user->role === 'teacher') {
+                // Teachers can only delete their own documents
+                if ($document->user_id !== $user->id) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Access denied. You can only delete your own documents.'
+                    ], 403);
+                }
+            } else {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Access denied. Insufficient privileges.'
+                ], 403);
+            }
+
+            // Log the deletion
+            AuditLog::create([
+                'user_id' => $user->id,
+                'document_id' => $document->id,
+                'action' => 'delete',
+                'details' => 'Document deleted: ' . $document->title,
+                'ip_address' => request()->ip(),
+            ]);
+
+            // Delete the file from storage
+            if ($document->file_path) {
+                Storage::disk('public')->delete($document->file_path);
+            }
+
+            // Delete the document record
+            $document->delete();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Document deleted successfully'
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to delete document',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
 }

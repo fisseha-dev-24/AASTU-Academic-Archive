@@ -12,14 +12,20 @@ use App\Http\Controllers\Auth\VerifyEmailController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('guest')->group(function () {
+    // Registration disabled for security - users are created by administrators only
     Route::get('register', function () {
         return response()->json([
-            'message' => 'Registration endpoint - use frontend at http://localhost:3000/signup',
-            'error' => 'This is an API-only backend. Please use the frontend application.'
-        ], 400);
+            'message' => 'Registration is disabled. Users are created by administrators only.',
+            'error' => 'Contact your system administrator to create an account.'
+        ], 403);
     })->name('register');
 
-    Route::post('register', [RegisteredUserController::class, 'store']);
+    Route::post('register', function () {
+        return response()->json([
+            'message' => 'Registration is disabled. Users are created by administrators only.',
+            'error' => 'Contact your system administrator to create an account.'
+        ], 403);
+    });
 
     Route::get('login', function () {
         return response()->json([

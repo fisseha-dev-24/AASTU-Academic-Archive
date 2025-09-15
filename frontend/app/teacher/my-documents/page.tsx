@@ -1,5 +1,11 @@
 "use client"
 
+"use client"
+
+"use client"
+
+"use client"
+
 import { useState, useEffect } from "react"
 import Link from "next/link"
 import { ArrowLeft, FileText, Eye, Download, Edit, Search, BarChart3, Plus, AlertCircle } from "lucide-react"

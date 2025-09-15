@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class Department extends Model
 {
-    protected $fillable = ['name'];
+    protected $fillable = ['name', 'code', 'description', 'head_id', 'college_id', 'is_active'];
 
     // A department has many users
     public function users()
@@ -26,5 +26,21 @@ class Department extends Model
     public function head()
     {
         return $this->belongsTo(User::class, 'head_id');
+    }
+
+    /**
+     * Get the college this department belongs to.
+     */
+    public function college()
+    {
+        return $this->belongsTo(College::class);
+    }
+
+    /**
+     * Get all video uploads for this department.
+     */
+    public function videoUploads()
+    {
+        return $this->hasMany(VideoUpload::class);
     }
 }

@@ -1,6 +1,13 @@
 "use client"
 
+"use client"
+
+"use client"
+
+"use client"
+
 import { useState, useEffect } from "react"
+import { useSearchParams } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -36,6 +43,7 @@ interface Document {
   title: string
   author: string
   department: string
+  department_id?: string
   type: string
   year: string
   uploadDate: string
@@ -44,9 +52,29 @@ interface Document {
   status: string
   description?: string
   keywords?: string[]
+  uploader?: {
+    name: string
+    email: string
+    role: string
+  }
+  reviewer?: {
+    name: string
+    email: string
+    role: string
+  }
+  comments?: Array<{
+    id: number
+    comment: string
+    type: string
+    from_user: string
+    created_at: string
+  }>
+  file_size?: string
+  file_path?: string
 }
 
 export default function DeanDocuments() {
+  const searchParams = useSearchParams()
   const [user, setUser] = useState<User | null>(null)
   const [searchTerm, setSearchTerm] = useState("")
   const [filterStatus, setFilterStatus] = useState("all")
@@ -54,11 +82,18 @@ export default function DeanDocuments() {
   const [documents, setDocuments] = useState<Document[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [departments, setDepartments] = useState<{id: string, name: string}[]>([])
 
   useEffect(() => {
     loadUserData()
     loadDocuments()
-  }, [])
+    
+    // Check for department filter from URL
+    const deptId = searchParams.get('dept')
+    if (deptId) {
+      setFilterDepartment(deptId)
+    }
+  }, [searchParams])
 
   const loadUserData = () => {
     const userInfo = localStorage.getItem('user_info')
@@ -90,27 +125,49 @@ export default function DeanDocuments() {
         params.status = filterStatus
       }
 
+      console.log('Loading documents with params:', params)
       const response = await apiClient.getDeanDocuments(params)
+      console.log('API response:', response)
 
       if (response.success && response.data) {
         const formattedDocuments = response.data.map((doc: any) => ({
           id: doc.id,
           title: doc.title,
           author: doc.author,
-          department: doc.department,
+          department: doc.department || 'Unknown',
+          department_id: doc.department_id || 'unknown',
           type: doc.type,
           year: doc.year,
           uploadDate: doc.date,
           downloads: doc.downloads || 0,
-          views: 0, // Will be updated when we have view tracking
+          views: doc.views || 0,
           status: doc.status || 'approved',
           description: doc.description,
-          keywords: doc.keywords
+          keywords: doc.keywords,
+          uploader: doc.uploader,
+          reviewer: doc.reviewer,
+          comments: doc.comments || [],
+          file_size: doc.file_size,
+          file_path: doc.file_path
         }))
+        console.log('Formatted documents:', formattedDocuments)
         setDocuments(formattedDocuments)
+        
+        // Extract unique departments for filter dropdown
+        const departmentSet = new Set<string>()
+        const uniqueDepartments: {id: string, name: string}[] = []
+        
+        formattedDocuments.forEach((doc: Document) => {
+          if (doc.department && doc.department_id && !departmentSet.has(doc.department)) {
+            departmentSet.add(doc.department)
+            uniqueDepartments.push({id: doc.department_id, name: doc.department})
+          }
+        })
+        
+        setDepartments(uniqueDepartments)
       } else {
         setDocuments([])
-        setError('No documents found')
+        setError(response.message || 'No documents found')
       }
     } catch (error) {
       console.error('Error loading documents:', error)
@@ -127,7 +184,7 @@ export default function DeanDocuments() {
 
   const handleViewDocument = async (documentId: number) => {
     try {
-      await apiClient.previewDocument(documentId)
+      await apiClient.previewDeanDocument(documentId)
       console.log('Document preview opened:', documentId)
     } catch (error) {
       console.error('Error previewing document:', error)
@@ -137,7 +194,7 @@ export default function DeanDocuments() {
 
   const handleDownloadDocument = async (documentId: number) => {
     try {
-      await apiClient.downloadDocument(documentId)
+      await apiClient.downloadDeanDocument(documentId)
       console.log('Document download started:', documentId)
       toast.success('Download started')
     } catch (error) {
@@ -164,7 +221,7 @@ export default function DeanDocuments() {
                          doc.author.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          doc.department.toLowerCase().includes(searchTerm.toLowerCase())
     const matchesStatus = filterStatus === "all" || doc.status === filterStatus
-    const matchesDepartment = filterDepartment === "all" || doc.department === filterDepartment
+    const matchesDepartment = filterDepartment === "all" || doc.department_id === filterDepartment
     
     return matchesSearch && matchesStatus && matchesDepartment
   })
@@ -225,11 +282,11 @@ export default function DeanDocuments() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Departments</SelectItem>
-                  <SelectItem value="Computer Science">Computer Science</SelectItem>
-                  <SelectItem value="Electrical Engineering">Electrical Engineering</SelectItem>
-                  <SelectItem value="Mechanical Engineering">Mechanical Engineering</SelectItem>
-                  <SelectItem value="Civil Engineering">Civil Engineering</SelectItem>
-                  <SelectItem value="Software Engineering">Software Engineering</SelectItem>
+                  {departments.map((dept) => (
+                    <SelectItem key={dept.id} value={dept.id}>
+                      {dept.name}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -294,6 +351,47 @@ export default function DeanDocuments() {
                             <span>{doc.uploadDate}</span>
                           </div>
                         </div>
+                        
+                        {/* Uploader and Reviewer Info */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-gray-600 mb-4">
+                          {doc.uploader && (
+                            <div className="flex items-center">
+                              <User className="h-4 w-4 mr-2 text-blue-600" />
+                              <div>
+                                <span className="font-medium">Uploaded by:</span> {doc.uploader.name} ({doc.uploader.role})
+                              </div>
+                            </div>
+                          )}
+                          {doc.reviewer && (
+                            <div className="flex items-center">
+                              <CheckCircle className="h-4 w-4 mr-2 text-green-600" />
+                              <div>
+                                <span className="font-medium">Reviewed by:</span> {doc.reviewer.name} ({doc.reviewer.role})
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                        
+                        {/* Comments Section */}
+                        {doc.comments && doc.comments.length > 0 && (
+                          <div className="mb-4">
+                            <h4 className="text-sm font-medium text-gray-700 mb-2">Comments:</h4>
+                            <div className="space-y-2">
+                              {doc.comments.map((comment) => (
+                                <div key={comment.id} className="bg-gray-50 p-3 rounded-lg">
+                                  <div className="flex justify-between items-start mb-1">
+                                    <span className="text-sm font-medium text-gray-900">{comment.from_user}</span>
+                                    <span className="text-xs text-gray-500">{comment.created_at}</span>
+                                  </div>
+                                  <p className="text-sm text-gray-700">{comment.comment}</p>
+                                  <span className="text-xs text-blue-600 bg-blue-100 px-2 py-1 rounded">
+                                    {comment.type}
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
                         {doc.description && (
                           <p className="text-gray-600 mb-4">{doc.description}</p>
                         )}

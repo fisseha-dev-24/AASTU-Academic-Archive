@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('schedules', function (Blueprint $table) {
             $table->id();
-            $table->unsignedBigInteger('teacher_id');
+            $table->unsignedBigInteger('teacher_id')->index();
             $table->string('title');
             $table->string('code'); // Course code like CS301
             $table->enum('type', ['lecture', 'lab', 'tutorial', 'exam', 'office_hours']);
@@ -25,12 +25,12 @@ return new class extends Migration
             $table->boolean('is_active')->default(true);
             $table->timestamps();
 
-            $table->foreign('teacher_id')->references('id')->on('users')->onDelete('cascade');
+            
         });
 
         Schema::create('deadlines', function (Blueprint $table) {
             $table->id();
-            $table->unsignedBigInteger('teacher_id');
+            $table->unsignedBigInteger('teacher_id')->index();
             $table->string('title');
             $table->string('course_code'); // CS301, CS302, etc.
             $table->enum('type', ['assignment', 'exam', 'project', 'presentation', 'report']);
@@ -40,12 +40,12 @@ return new class extends Migration
             $table->boolean('is_completed')->default(false);
             $table->timestamps();
 
-            $table->foreign('teacher_id')->references('id')->on('users')->onDelete('cascade');
+            
         });
 
         Schema::create('office_hours', function (Blueprint $table) {
             $table->id();
-            $table->unsignedBigInteger('teacher_id');
+            $table->unsignedBigInteger('teacher_id')->index();
             $table->string('day');
             $table->string('time');
             $table->string('location');
@@ -54,7 +54,7 @@ return new class extends Migration
             $table->boolean('is_active')->default(true);
             $table->timestamps();
 
-            $table->foreign('teacher_id')->references('id')->on('users')->onDelete('cascade');
+            
         });
     }
 

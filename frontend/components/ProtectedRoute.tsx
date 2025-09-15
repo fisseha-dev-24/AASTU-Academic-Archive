@@ -1,5 +1,7 @@
 "use client"
 
+"use client"
+
 import { useAuth } from "@/contexts/AuthContext"
 import { useRouter } from "next/navigation"
 import { useEffect } from "react"
@@ -36,6 +38,7 @@ export default function ProtectedRoute({
           'department_head': '/department/dashboard',
           'college_dean': '/dean/dashboard',
           'admin': '/admin/dashboard',
+          'it_manager': '/admin/dashboard',
         }
         
         const redirectUrl = roleRedirects[user.role] || '/login'
