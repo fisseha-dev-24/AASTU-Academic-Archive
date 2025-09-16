@@ -41,8 +41,8 @@ Route::get('/departments', [DeanController::class, 'getDepartments']);
 // Public upload route removed - now protected in teacher group
 
 // Public preview and download routes (no authentication required)
-Route::get('/documents/{id}/preview', [StudentController::class, 'previewDocument']);
-Route::get('/documents/{id}/download', [StudentController::class, 'downloadDocument']);
+Route::get('/documents/{id}/preview', [DocumentController::class, 'previewDocument']);
+Route::get('/documents/{id}/download', [DocumentController::class, 'download']);
 
 // Protected routes
 Route::middleware('auth:sanctum')->group(function () {
@@ -60,15 +60,18 @@ Route::middleware('auth:sanctum')->group(function () {
     
     // Student routes
     Route::prefix('student')->group(function () {
-        Route::get('/profile', [StudentController::class, 'getProfile']);
+        Route::get('/profile', [StudentController::class, 'getProfile']);   
         Route::put('/profile', [StudentController::class, 'updateProfile']);
         Route::get('/dashboard', [StudentController::class, 'dashboard']);
         Route::get('/documents', [StudentController::class, 'documents']);
         Route::get('/search-documents', [StudentController::class, 'searchDocuments']);
+        Route::get('/filter-options', [DocumentController::class, 'getFilterOptions']);
         Route::get('/history', [StudentController::class, 'getHistory']);
         Route::get('/bookmarks', [StudentController::class, 'getBookmarks']);
         Route::post('/bookmarks', [StudentController::class, 'addBookmark']);
         Route::delete('/bookmarks/{id}', [StudentController::class, 'removeBookmark']);
+        Route::get('/videos', [StudentController::class, 'getVideos']);
+        Route::post('/videos/{id}/view', [StudentController::class, 'incrementVideoViews']);
     });
     
     // Teacher routes

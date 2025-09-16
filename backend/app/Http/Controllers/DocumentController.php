@@ -82,25 +82,36 @@ class DocumentController extends Controller
         // Check if user has access to this document
         $user = Auth::user();
         
-        // College deans can preview any document
-        if ($user->role === 'college_dean') {
-            // No restrictions for deans
-        }
-        // Department heads can preview any document
-        elseif ($user->role === 'department_head') {
-            // No restrictions for department heads
-        }
-        // Teachers can preview their own documents
-        elseif ($user->role === 'teacher') {
-            if ($document->user_id !== $user->id) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Access denied'
-                ], 403);
+        // If user is authenticated, check role-based access
+        if ($user) {
+            // College deans can preview any document
+            if ($user->role === 'college_dean') {
+                // No restrictions for deans
             }
-        }
-        // Students can preview approved documents
-        elseif ($user->role === 'student') {
+            // Department heads can preview any document
+            elseif ($user->role === 'department_head') {
+                // No restrictions for department heads
+            }
+            // Teachers can preview their own documents
+            elseif ($user->role === 'teacher') {
+                if ($document->user_id !== $user->id) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Access denied'
+                    ], 403);
+                }
+            }
+            // Students can preview approved documents
+            elseif ($user->role === 'student') {
+                if ($document->status !== 'approved') {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Document not available'
+                    ], 403);
+                }
+            }
+        } else {
+            // For unauthenticated users, only allow preview of approved documents
             if ($document->status !== 'approved') {
                 return response()->json([
                     'success' => false,
@@ -109,14 +120,16 @@ class DocumentController extends Controller
             }
         }
 
-        // Log view
-        AuditLog::create([
-            'user_id'     => Auth::id(),
-            'document_id' => $document->id,
-            'action'      => 'view',
-            'details'     => 'Document viewed: ' . $document->title,
-            'ip_address'  => $request->ip(),
-        ]);
+        // Log view (only if user is authenticated)
+        if ($user) {
+            AuditLog::create([
+                'user_id'     => Auth::id(),
+                'document_id' => $document->id,
+                'action'      => 'view',
+                'details'     => 'Document viewed: ' . $document->title,
+                'ip_address'  => $request->ip(),
+            ]);
+        }
 
         // Check if file exists
         if (!Storage::disk('public')->exists($document->file_path)) {

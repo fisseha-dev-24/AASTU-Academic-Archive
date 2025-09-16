@@ -369,7 +369,7 @@ export default function AdminDashboard() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600 mx-auto"></div>
           <p className="mt-4 text-gray-600">Loading your dashboard...</p>
@@ -379,7 +379,7 @@ export default function AdminDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
+    <div className="min-h-screen bg-gray-50">
       <PageHeader
         title="Admin Dashboard"
         subtitle="System administration and monitoring"
@@ -390,106 +390,105 @@ export default function AdminDashboard() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Welcome Section */}
         <div className="mb-8">
-          <div className="bg-gradient-to-r from-gray-800 via-gray-900 to-black rounded-3xl p-8 text-white shadow-2xl">
-            <div className="flex items-center justify-between">
-              <div className="space-y-4">
-                <div className="flex items-center space-x-2">
-                  <Crown className="h-5 w-5 text-yellow-300" />
-                  <span className="text-gray-100 font-medium">Welcome back, Administrator!</span>
-                </div>
-                <h1 className="text-3xl lg:text-4xl font-bold tracking-tight">
-                  {welcomeMessage}
-                </h1>
-                <p className="text-gray-100 text-lg max-w-2xl">
-                  Monitor system health, manage users, and ensure optimal performance of the academic archive platform.
-                </p>
-                <div className="flex items-center space-x-6 pt-2">
+          <Card className="bg-white shadow-sm">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div className="space-y-2">
                   <div className="flex items-center space-x-2">
-                    <Shield className="h-5 w-5 text-green-300" />
-                    <span className="text-gray-100">System Administrator</span>
+                    <Crown className="h-5 w-5 text-yellow-600" />
+                    <span className="text-gray-600 font-medium">Welcome back, Administrator!</span>
                   </div>
-                  <div className="flex items-center space-x-2">
-                    <Monitor className="h-5 w-5 text-blue-300" />
-                    <span className="text-gray-100">System Health: {stats?.system_health}</span>
+                  <h1 className="text-2xl lg:text-3xl font-bold text-gray-900">
+                    {welcomeMessage}
+                  </h1>
+                  <p className="text-gray-600 max-w-2xl">
+                    Monitor system health, manage users, and ensure optimal performance of the academic archive platform.
+                  </p>
+                  <div className="flex items-center space-x-6 pt-2">
+                    <div className="flex items-center space-x-2">
+                      <Shield className="h-4 w-4 text-green-600" />
+                      <span className="text-sm text-gray-600">System Administrator</span>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Monitor className="h-4 w-4 text-blue-600" />
+                      <span className="text-sm text-gray-600">System Health: {stats?.system_health}</span>
+                    </div>
+                  </div>
+                </div>
+                <div className="hidden lg:block">
+                  <div className="bg-gray-50 rounded-lg p-4">
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-gray-900">{stats?.total_users?.toLocaleString() || 0}</div>
+                      <div className="text-sm text-gray-600">Total Users</div>
+                    </div>
                   </div>
                 </div>
               </div>
-              <div className="hidden lg:block">
-                <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6">
-                  <div className="text-center">
-                    <div className="text-3xl font-bold text-white">{stats?.total_users?.toLocaleString() || 0}</div>
-                    <div className="text-gray-100 text-sm">Total Users</div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
+            </CardContent>
+          </Card>
         </div>
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1">
+          <Card className="bg-white shadow-sm hover:shadow-md transition-shadow duration-200">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-semibold text-gray-700">Total Users</CardTitle>
-              <Users className="h-5 w-5 text-gray-600" />
+              <CardTitle className="text-sm font-medium text-gray-600">Total Users</CardTitle>
+              <Users className="h-4 w-4 text-gray-400" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-gray-600">{stats?.total_users?.toLocaleString() || 0}</div>
-              <p className="text-xs text-gray-600 mt-1">+8% from last month</p>
+              <div className="text-2xl font-bold text-gray-900">{stats?.total_users?.toLocaleString() || 0}</div>
+              <p className="text-xs text-gray-500 mt-1">+8% from last month</p>
             </CardContent>
           </Card>
 
-          <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1">
+          <Card className="bg-white shadow-sm hover:shadow-md transition-shadow duration-200">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-semibold text-blue-700">Active Sessions</CardTitle>
-              <Activity className="h-5 w-5 text-blue-600" />
+              <CardTitle className="text-sm font-medium text-gray-600">Active Sessions</CardTitle>
+              <Activity className="h-4 w-4 text-gray-400" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-blue-600">{stats?.active_sessions || 0}</div>
-              <p className="text-xs text-gray-600 mt-1">Currently online</p>
+              <div className="text-2xl font-bold text-gray-900">{stats?.active_sessions || 0}</div>
+              <p className="text-xs text-gray-500 mt-1">Currently online</p>
             </CardContent>
           </Card>
 
-          <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1">
+          <Card className="bg-white shadow-sm hover:shadow-md transition-shadow duration-200">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-semibold text-green-700">Total Documents</CardTitle>
-              <FileText className="h-5 w-5 text-green-600" />
+              <CardTitle className="text-sm font-medium text-gray-600">Total Documents</CardTitle>
+              <FileText className="h-4 w-4 text-gray-400" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-green-600">{stats?.total_documents?.toLocaleString() || 0}</div>
-              <p className="text-xs text-gray-600 mt-1">+15% from last month</p>
+              <div className="text-2xl font-bold text-gray-900">{stats?.total_documents?.toLocaleString() || 0}</div>
+              <p className="text-xs text-gray-500 mt-1">+15% from last month</p>
             </CardContent>
           </Card>
 
-          <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1">
+          <Card className="bg-white shadow-sm hover:shadow-md transition-shadow duration-200">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-semibold text-purple-700">System Health</CardTitle>
-              <Monitor className="h-5 w-5 text-purple-600" />
+              <CardTitle className="text-sm font-medium text-gray-600">System Health</CardTitle>
+              <Monitor className="h-4 w-4 text-gray-400" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-purple-600">{stats?.system_health || 'Good'}</div>
-              <p className="text-xs text-gray-600 mt-1">Uptime: {stats?.system_uptime || 'N/A'}</p>
+              <div className="text-2xl font-bold text-gray-900">{stats?.system_health || 'Good'}</div>
+              <p className="text-xs text-gray-500 mt-1">Uptime: {stats?.system_uptime || 'N/A'}</p>
             </CardContent>
           </Card>
         </div>
 
         {/* Quick Actions */}
         <div className="mb-8">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center space-x-2">
-            <Zap className="h-6 w-6 text-gray-600" />
-            <span>Quick Actions</span>
-          </h2>
+          <h2 className="text-xl font-semibold text-gray-900 mb-4">Quick Actions</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <Link href="/admin/users">
-              <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 cursor-pointer group">
-                <CardContent className="p-6">
-                  <div className="flex items-center space-x-4">
-                    <div className="bg-gray-100 p-3 rounded-xl group-hover:bg-gray-200 transition-colors duration-200">
-                      <Users className="h-6 w-6 text-gray-600" />
+              <Card className="bg-white shadow-sm hover:shadow-md transition-shadow duration-200 cursor-pointer">
+                <CardContent className="p-4">
+                  <div className="flex items-center space-x-3">
+                    <div className="bg-gray-100 p-2 rounded-lg">
+                      <Users className="h-5 w-5 text-gray-600" />
                     </div>
                     <div>
-                      <h3 className="font-semibold text-gray-900">User Management</h3>
-                      <p className="text-sm text-gray-600">Manage all users</p>
+                      <h3 className="font-medium text-gray-900">User Management</h3>
+                      <p className="text-sm text-gray-500">Manage all users</p>
                     </div>
                   </div>
                 </CardContent>
@@ -497,15 +496,15 @@ export default function AdminDashboard() {
             </Link>
 
             <Link href="/admin/system">
-              <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 cursor-pointer group">
-                <CardContent className="p-6">
-                  <div className="flex items-center space-x-4">
-                    <div className="bg-blue-100 p-3 rounded-xl group-hover:bg-blue-200 transition-colors duration-200">
-                      <Server className="h-6 w-6 text-blue-600" />
+              <Card className="bg-white shadow-sm hover:shadow-md transition-shadow duration-200 cursor-pointer">
+                <CardContent className="p-4">
+                  <div className="flex items-center space-x-3">
+                    <div className="bg-blue-100 p-2 rounded-lg">
+                      <Server className="h-5 w-5 text-blue-600" />
                     </div>
                     <div>
-                      <h3 className="font-semibold text-gray-900">System Monitor</h3>
-                      <p className="text-sm text-gray-600">Monitor system health</p>
+                      <h3 className="font-medium text-gray-900">System Monitor</h3>
+                      <p className="text-sm text-gray-500">Monitor system health</p>
                     </div>
                   </div>
                 </CardContent>
@@ -513,15 +512,15 @@ export default function AdminDashboard() {
             </Link>
 
             <Link href="/admin/security">
-              <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 cursor-pointer group">
-                <CardContent className="p-6">
-                  <div className="flex items-center space-x-4">
-                    <div className="bg-green-100 p-3 rounded-xl group-hover:bg-green-200 transition-colors duration-200">
-                      <Shield className="h-6 w-6 text-green-600" />
+              <Card className="bg-white shadow-sm hover:shadow-md transition-shadow duration-200 cursor-pointer">
+                <CardContent className="p-4">
+                  <div className="flex items-center space-x-3">
+                    <div className="bg-green-100 p-2 rounded-lg">
+                      <Shield className="h-5 w-5 text-green-600" />
                     </div>
                     <div>
-                      <h3 className="font-semibold text-gray-900">Security</h3>
-                      <p className="text-sm text-gray-600">Security settings</p>
+                      <h3 className="font-medium text-gray-900">Security</h3>
+                      <p className="text-sm text-gray-500">Security settings</p>
                     </div>
                   </div>
                 </CardContent>
@@ -529,15 +528,15 @@ export default function AdminDashboard() {
             </Link>
 
             <Link href="/admin/backups">
-              <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 cursor-pointer group">
-                <CardContent className="p-6">
-                  <div className="flex items-center space-x-4">
-                    <div className="bg-purple-100 p-3 rounded-xl group-hover:bg-purple-200 transition-colors duration-200">
-                      <Database className="h-6 w-6 text-purple-600" />
+              <Card className="bg-white shadow-sm hover:shadow-md transition-shadow duration-200 cursor-pointer">
+                <CardContent className="p-4">
+                  <div className="flex items-center space-x-3">
+                    <div className="bg-purple-100 p-2 rounded-lg">
+                      <Database className="h-5 w-5 text-purple-600" />
                     </div>
                     <div>
-                      <h3 className="font-semibold text-gray-900">Backups</h3>
-                      <p className="text-sm text-gray-600">Manage backups</p>
+                      <h3 className="font-medium text-gray-900">Backups</h3>
+                      <p className="text-sm text-gray-500">Manage backups</p>
                     </div>
                   </div>
                 </CardContent>
@@ -545,15 +544,15 @@ export default function AdminDashboard() {
             </Link>
 
             <Link href="/admin/audit-logs">
-              <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 cursor-pointer group">
-                <CardContent className="p-6">
-                  <div className="flex items-center space-x-4">
-                    <div className="bg-orange-100 p-3 rounded-xl group-hover:bg-orange-200 transition-colors duration-200">
-                      <FileText className="h-6 w-6 text-orange-600" />
+              <Card className="bg-white shadow-sm hover:shadow-md transition-shadow duration-200 cursor-pointer">
+                <CardContent className="p-4">
+                  <div className="flex items-center space-x-3">
+                    <div className="bg-orange-100 p-2 rounded-lg">
+                      <FileText className="h-5 w-5 text-orange-600" />
                     </div>
                     <div>
-                      <h3 className="font-semibold text-gray-900">Audit Logs</h3>
-                      <p className="text-sm text-gray-600">System activity logs</p>
+                      <h3 className="font-medium text-gray-900">Audit Logs</h3>
+                      <p className="text-sm text-gray-500">System activity logs</p>
                     </div>
                   </div>
                 </CardContent>
@@ -564,10 +563,10 @@ export default function AdminDashboard() {
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* System Health */}
-          <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-xl">
+          <Card className="bg-white shadow-sm">
             <CardHeader>
               <CardTitle className="flex items-center space-x-2">
-                <Monitor className="h-5 w-5 text-blue-600" />
+                <Monitor className="h-5 w-5 text-gray-600" />
                 <span>System Health</span>
               </CardTitle>
               <CardDescription>Real-time system monitoring</CardDescription>
@@ -577,42 +576,42 @@ export default function AdminDashboard() {
                 {systemHealth && (
                   <>
                     <div className="grid grid-cols-2 gap-4">
-                      <div className="p-4 bg-gray-50/50 rounded-xl">
+                      <div className="p-4 bg-gray-50 rounded-lg">
                         <div className="flex items-center space-x-2 mb-2">
-                          <Cpu className="h-4 w-4 text-blue-500" />
-                          <span className="text-sm font-medium">CPU Usage</span>
+                          <Cpu className="h-4 w-4 text-gray-600" />
+                          <span className="text-sm font-medium text-gray-600">CPU Usage</span>
                         </div>
-                        <div className="text-2xl font-bold text-blue-600">{systemHealth.cpu_usage}%</div>
+                        <div className="text-2xl font-bold text-gray-900">{systemHealth.cpu_usage}%</div>
                       </div>
-                      <div className="p-4 bg-gray-50/50 rounded-xl">
+                      <div className="p-4 bg-gray-50 rounded-lg">
                         <div className="flex items-center space-x-2 mb-2">
-                          <MemoryStick className="h-4 w-4 text-green-500" />
-                          <span className="text-sm font-medium">Memory Usage</span>
+                          <MemoryStick className="h-4 w-4 text-gray-600" />
+                          <span className="text-sm font-medium text-gray-600">Memory Usage</span>
                         </div>
-                        <div className="text-2xl font-bold text-green-600">{systemHealth.memory_usage}%</div>
+                        <div className="text-2xl font-bold text-gray-900">{systemHealth.memory_usage}%</div>
                       </div>
                     </div>
-                    <div className="p-4 bg-gray-50/50 rounded-xl">
+                    <div className="p-4 bg-gray-50 rounded-lg">
                       <div className="flex items-center space-x-2 mb-2">
-                        <HardDrive className="h-4 w-4 text-purple-500" />
-                        <span className="text-sm font-medium">Disk Usage</span>
+                        <HardDrive className="h-4 w-4 text-gray-600" />
+                        <span className="text-sm font-medium text-gray-600">Disk Usage</span>
                       </div>
-                      <div className="text-2xl font-bold text-purple-600">{systemHealth.disk_usage}%</div>
+                      <div className="text-2xl font-bold text-gray-900">{systemHealth.disk_usage}%</div>
                     </div>
                     <div className="grid grid-cols-2 gap-4">
-                      <div className="p-4 bg-gray-50/50 rounded-xl">
+                      <div className="p-4 bg-gray-50 rounded-lg">
                         <div className="flex items-center space-x-2 mb-2">
-                          <Database className="h-4 w-4 text-orange-500" />
-                          <span className="text-sm font-medium">DB Connections</span>
+                          <Database className="h-4 w-4 text-gray-600" />
+                          <span className="text-sm font-medium text-gray-600">DB Connections</span>
                         </div>
-                        <div className="text-2xl font-bold text-orange-600">{systemHealth.database_connections}</div>
+                        <div className="text-2xl font-bold text-gray-900">{systemHealth.database_connections}</div>
                       </div>
-                      <div className="p-4 bg-gray-50/50 rounded-xl">
+                      <div className="p-4 bg-gray-50 rounded-lg">
                         <div className="flex items-center space-x-2 mb-2">
-                          <BarChart3 className="h-4 w-4 text-indigo-500" />
-                          <span className="text-sm font-medium">Cache Hit Rate</span>
+                          <BarChart3 className="h-4 w-4 text-gray-600" />
+                          <span className="text-sm font-medium text-gray-600">Cache Hit Rate</span>
                         </div>
-                        <div className="text-2xl font-bold text-indigo-600">{systemHealth.cache_hit_rate}%</div>
+                        <div className="text-2xl font-bold text-gray-900">{systemHealth.cache_hit_rate}%</div>
                       </div>
                     </div>
                   </>
@@ -622,7 +621,7 @@ export default function AdminDashboard() {
           </Card>
 
           {/* User Management */}
-          <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-xl">
+          <Card className="bg-white shadow-sm">
             <CardHeader>
               <CardTitle className="flex items-center space-x-2">
                 <Users className="h-5 w-5 text-gray-600" />
@@ -633,7 +632,7 @@ export default function AdminDashboard() {
             <CardContent>
               <div className="space-y-4">
                 {userManagement.slice(0, 5).map((user) => (
-                  <div key={user.id} className="p-4 bg-gray-50/50 rounded-xl hover:bg-gray-50 transition-colors duration-200">
+                  <div key={user.id} className="p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors duration-200">
                     <div className="flex items-center justify-between mb-2">
                       <div>
                         <h4 className="font-semibold text-gray-900">{user.name}</h4>
@@ -671,10 +670,10 @@ export default function AdminDashboard() {
 
         {/* System Monitoring */}
         <div className="mt-8">
-          <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-xl">
+          <Card className="bg-white shadow-sm">
             <CardHeader>
               <CardTitle className="flex items-center space-x-2">
-                <Server className="h-5 w-5 text-purple-600" />
+                <Server className="h-5 w-5 text-gray-600" />
                 <span>System Monitoring</span>
               </CardTitle>
               <CardDescription>Real-time system status and performance metrics</CardDescription>
@@ -683,9 +682,9 @@ export default function AdminDashboard() {
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {systemMonitoring && (
                   <>
-                    <div className="p-4 bg-gray-50/50 rounded-xl">
+                    <div className="p-4 bg-gray-50 rounded-lg">
                       <div className="flex items-center space-x-2 mb-3">
-                        <Database className="h-5 w-5 text-blue-500" />
+                        <Database className="h-5 w-5 text-gray-600" />
                         <h4 className="font-semibold text-gray-900">Database</h4>
                       </div>
                       <div className="space-y-2 text-sm">
@@ -706,9 +705,9 @@ export default function AdminDashboard() {
                       </div>
                     </div>
 
-                    <div className="p-4 bg-gray-50/50 rounded-xl">
+                    <div className="p-4 bg-gray-50 rounded-lg">
                       <div className="flex items-center space-x-2 mb-3">
-                        <HardDrive className="h-5 w-5 text-green-500" />
+                        <HardDrive className="h-5 w-5 text-gray-600" />
                         <h4 className="font-semibold text-gray-900">File System</h4>
                       </div>
                       <div className="space-y-2 text-sm">
@@ -729,9 +728,9 @@ export default function AdminDashboard() {
                       </div>
                     </div>
 
-                    <div className="p-4 bg-gray-50/50 rounded-xl">
+                    <div className="p-4 bg-gray-50 rounded-lg">
                       <div className="flex items-center space-x-2 mb-3">
-                        <Network className="h-5 w-5 text-purple-500" />
+                        <Network className="h-5 w-5 text-gray-600" />
                         <h4 className="font-semibold text-gray-900">API Performance</h4>
                       </div>
                       <div className="space-y-2 text-sm">

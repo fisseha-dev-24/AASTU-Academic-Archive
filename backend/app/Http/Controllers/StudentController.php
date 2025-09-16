@@ -9,6 +9,7 @@ use App\Models\User;
 use App\Models\Document;
 use App\Models\DocumentAnalytics;
 use App\Models\Bookmark;
+use App\Models\VideoUpload;
 use Illuminate\Support\Facades\Storage;
 
 class StudentController extends Controller
@@ -505,8 +506,7 @@ class StudentController extends Controller
                 $query->where(function ($q) use ($search) {
                     $q->where('title', 'like', "%{$search}%")
                       ->orWhere('author', 'like', "%{$search}%")
-                      ->orWhere('description', 'like', "%{$search}%")
-                      ->orWhere('tags', 'like', "%{$search}%");
+                      ->orWhere('description', 'like', "%{$search}%");
                 });
             }
             
@@ -517,12 +517,48 @@ class StudentController extends Controller
             
             // Apply department filter (if specified, otherwise show all)
             if ($request->has('department') && $request->department !== 'all') {
-                $query->where('department_id', $request->department);
+                $query->whereHas('department', function ($q) use ($request) {
+                    $q->where('name', $request->department);
+                });
+            }
+            
+            // Apply college filter (if specified, otherwise show all)
+            if ($request->has('college') && $request->college !== 'all') {
+                $query->whereHas('department', function ($q) use ($request) {
+                    $q->whereHas('college', function ($collegeQuery) use ($request) {
+                        $collegeQuery->where('name', $request->college);
+                    });
+                });
             }
             
             // Apply year filter
             if ($request->has('year') && $request->year !== 'all') {
                 $query->where('year', $request->year);
+            }
+            
+            // Apply semester filter
+            if ($request->has('semester') && $request->semester !== 'all') {
+                $query->where('semester', $request->semester);
+            }
+            
+            // Apply academic year filter
+            if ($request->has('academic_year') && $request->academic_year !== 'all') {
+                $query->where('academic_year', $request->academic_year);
+            }
+            
+            // Apply language filter
+            if ($request->has('language') && $request->language !== 'all') {
+                $query->where('language', $request->language);
+            }
+            
+            // Apply file format filter
+            if ($request->has('file_format') && $request->file_format !== 'all') {
+                $query->where('file_type', 'like', '%' . strtolower($request->file_format) . '%');
+            }
+            
+            // Apply author filter
+            if ($request->has('author') && $request->author) {
+                $query->where('author', 'like', '%' . $request->author . '%');
             }
             
             // Apply sorting
@@ -603,5 +639,167 @@ class StudentController extends Controller
         $sizes = ["Bytes", "KB", "MB", "GB"];
         $i = floor(log($bytes) / log($k));
         return round($bytes / pow($k, $i), 2) . " " . $sizes[$i];
+    }
+
+    /**
+     * Get videos for students
+     */
+    public function getVideos(Request $request): JsonResponse
+    {
+        try {
+            $user = Auth::user();
+            
+            if ($user->role !== 'student') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Access denied'
+                ], 403);
+            }
+
+            // Build query for approved videos
+            $query = VideoUpload::where('status', 'approved')
+                ->with(['uploader', 'department', 'category']);
+
+            // Apply department filter (show videos from student's department and popular videos)
+            $query->where(function($q) use ($user) {
+                $q->where('department_id', $user->department_id)
+                  ->orWhere('views', '>', 100); // Popular videos from other departments
+            });
+
+            // Apply search filter
+            if ($request->has('search') && $request->search) {
+                $search = $request->search;
+                $query->where(function ($q) use ($search) {
+                    $q->where('title', 'like', "%{$search}%")
+                      ->orWhere('description', 'like', "%{$search}%")
+                      ->orWhere('keywords', 'like', "%{$search}%");
+                });
+            }
+
+            // Apply category filter
+            if ($request->has('category') && $request->category !== 'all') {
+                $query->where('category_id', $request->category);
+            }
+
+            // Apply year filter
+            if ($request->has('year') && $request->year !== 'all') {
+                $query->where('year', $request->year);
+            }
+
+            // Apply sorting
+            $sortBy = $request->get('sort_by', 'date-desc');
+            switch ($sortBy) {
+                case 'date-asc':
+                    $query->orderBy('created_at', 'asc');
+                    break;
+                case 'date-desc':
+                    $query->orderBy('created_at', 'desc');
+                    break;
+                case 'title-asc':
+                    $query->orderBy('title', 'asc');
+                    break;
+                case 'title-desc':
+                    $query->orderBy('title', 'desc');
+                    break;
+                case 'views-desc':
+                    $query->orderBy('views', 'desc');
+                    break;
+                case 'likes-desc':
+                    $query->orderBy('likes', 'desc');
+                    break;
+                default:
+                    $query->orderBy('created_at', 'desc');
+            }
+
+            $videos = $query->paginate(20);
+
+            // Transform data for frontend
+            $transformedVideos = $videos->getCollection()->map(function ($video) {
+                return [
+                    'id' => $video->id,
+                    'title' => $video->title,
+                    'description' => $video->description,
+                    'instructor' => $video->uploader ? $video->uploader->name : 'Unknown',
+                    'department' => $video->department ? $video->department->name : 'Unknown',
+                    'category' => $video->category ? $video->category->name : 'General',
+                    'duration' => $video->duration ?? 'Unknown',
+                    'views' => $video->views ?? 0,
+                    'likes' => $video->likes ?? 0,
+                    'uploadDate' => $video->created_at->format('Y-m-d'),
+                    'year' => $video->year,
+                    'video_url' => $video->video_url,
+                    'video_platform' => $video->video_platform,
+                    'video_id' => $video->video_id,
+                    'embed_url' => $video->embed_url,
+                    'thumbnail_url' => $video->thumbnail_url,
+                    'keywords' => $video->keywords ? explode(',', $video->keywords) : [],
+                    'is_featured' => $video->is_featured ?? false,
+                    'status' => $video->status
+                ];
+            });
+
+            return response()->json([
+                'success' => true,
+                'data' => $transformedVideos,
+                'pagination' => [
+                    'current_page' => $videos->currentPage(),
+                    'last_page' => $videos->lastPage(),
+                    'per_page' => $videos->perPage(),
+                    'total' => $videos->total(),
+                ]
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to load videos'
+            ], 500);
+        }
+    }
+
+    /**
+     * Increment video view count
+     */
+    public function incrementVideoViews(Request $request, $videoId): JsonResponse
+    {
+        try {
+            $user = Auth::user();
+            
+            if ($user->role !== 'student') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Access denied'
+                ], 403);
+            }
+
+            $video = VideoUpload::where('id', $videoId)
+                ->where('status', 'approved')
+                ->first();
+
+            if (!$video) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Video not found'
+                ], 404);
+            }
+
+            // Increment view count
+            $video->increment('views');
+
+            return response()->json([
+                'success' => true,
+                'message' => 'View count updated',
+                'data' => [
+                    'video_id' => $video->id,
+                    'views' => $video->views
+                ]
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to update view count'
+            ], 500);
+        }
     }
 }

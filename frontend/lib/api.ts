@@ -346,7 +346,35 @@ class ApiClient {
       throw new Error('Authentication required');
     }
 
-    const url = `${this.baseURL}/teacher/documents/${documentId}/download`;
+    // Get user role to determine the correct endpoint
+    const userInfo = localStorage.getItem('user_info');
+    let userRole = 'student'; // default
+    if (userInfo) {
+      try {
+        const userData = JSON.parse(userInfo);
+        userRole = userData.role || 'student';
+      } catch (error) {
+        console.warn('Failed to parse user info:', error);
+      }
+    }
+
+    // Use the correct endpoint based on user role
+    let url;
+    switch (userRole) {
+      case 'teacher':
+        url = `${this.baseURL}/teacher/documents/${documentId}/download`;
+        break;
+      case 'department_head':
+        url = `${this.baseURL}/department/documents/${documentId}/download`;
+        break;
+      case 'college_dean':
+        url = `${this.baseURL}/dean/documents/${documentId}/download`;
+        break;
+      case 'student':
+      default:
+        url = `${this.baseURL}/documents/${documentId}/download`;
+        break;
+    }
     const response = await fetch(url, {
       method: 'GET',
       headers: {
@@ -393,7 +421,35 @@ class ApiClient {
       throw new Error('Authentication required');
     }
 
-    const url = `${this.baseURL}/teacher/documents/${documentId}/preview`;
+    // Get user role to determine the correct endpoint
+    const userInfo = localStorage.getItem('user_info');
+    let userRole = 'student'; // default
+    if (userInfo) {
+      try {
+        const userData = JSON.parse(userInfo);
+        userRole = userData.role || 'student';
+      } catch (error) {
+        console.warn('Failed to parse user info:', error);
+      }
+    }
+
+    // Use the correct endpoint based on user role
+    let url;
+    switch (userRole) {
+      case 'teacher':
+        url = `${this.baseURL}/teacher/documents/${documentId}/preview`;
+        break;
+      case 'department_head':
+        url = `${this.baseURL}/department/documents/${documentId}/preview`;
+        break;
+      case 'college_dean':
+        url = `${this.baseURL}/dean/documents/${documentId}/preview`;
+        break;
+      case 'student':
+      default:
+        url = `${this.baseURL}/documents/${documentId}/preview`;
+        break;
+    }
     
     // Track the view first (don't let tracking errors interfere with preview)
     try {
@@ -474,6 +530,12 @@ class ApiClient {
     const queryString = params ? new URLSearchParams(params).toString() : '';
     return this.request(`/student/videos${queryString ? `?${queryString}` : ''}`, {
       method: 'GET',
+    });
+  }
+
+  async incrementVideoViews(videoId: number): Promise<ApiResponse> {
+    return this.request(`/student/videos/${videoId}/view`, {
+      method: 'POST',
     });
   }
 
@@ -603,7 +665,8 @@ class ApiClient {
     });
 
     if (!response.ok) {
-      throw new Error('Failed to preview document');
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || `Failed to preview document (${response.status})`);
     }
 
     // Get the file blob
@@ -634,7 +697,8 @@ class ApiClient {
     });
 
     if (!response.ok) {
-      throw new Error('Download failed');
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || `Download failed (${response.status})`);
     }
 
     // Get filename from response headers
@@ -1097,12 +1161,6 @@ class ApiClient {
     return data;
   }
 
-  // Admin system health API
-  async getAdminSystemHealth(): Promise<ApiResponse> {
-    return this.request('/admin/system-health', {
-      method: 'GET',
-    });
-  }
 
   // Admin backup APIs
   async getAdminBackups(): Promise<ApiResponse> {

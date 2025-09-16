@@ -40,6 +40,10 @@ interface VideoContent {
   category: string
   thumbnail: string
   description: string
+  video_url: string
+  video_platform: string
+  video_id: string
+  embed_url: string
 }
 
 export default function VideoLibraryPage() {
@@ -73,7 +77,7 @@ export default function VideoLibraryPage() {
     setLoading(true)
     try {
       const params: any = {}
-      if (searchQuery) params.search_query = searchQuery
+      if (searchQuery) params.search = searchQuery
       if (selectedCategory && selectedCategory !== "all") params.category = selectedCategory
       if (selectedDuration && selectedDuration !== "all") params.duration = selectedDuration
 
@@ -90,13 +94,35 @@ export default function VideoLibraryPage() {
     }
   }
 
-  const handleViewVideo = async (videoId: number) => {
+  const handleViewVideo = async (video: VideoContent) => {
     try {
-      await apiClient.previewDocument(videoId)
-      console.log('Video preview opened:', videoId)
+      // Open video in a new tab
+      window.open(video.video_url, '_blank')
+      
+      // Increment view count via API
+      try {
+        await apiClient.incrementVideoViews(video.id)
+        
+        // Update local state with new view count
+        setVideos(prevVideos => 
+          prevVideos.map(v => 
+            v.id === video.id ? { ...v, views: v.views + 1 } : v
+          )
+        )
+      } catch (apiError) {
+        console.warn('Failed to update view count:', apiError)
+        // Still increment locally even if API fails
+        setVideos(prevVideos => 
+          prevVideos.map(v => 
+            v.id === video.id ? { ...v, views: v.views + 1 } : v
+          )
+        )
+      }
+      
+      console.log('Opening video:', video.title, 'URL:', video.video_url)
     } catch (error) {
-      console.error('Error previewing video:', error)
-      toast.error('Failed to preview video')
+      console.error('Error opening video:', error)
+      toast.error('Failed to open video')
     }
   }
 
@@ -219,7 +245,7 @@ export default function VideoLibraryPage() {
                           <span className="text-sm text-gray-600">by {video.instructor}</span>
                         </div>
 
-                        <Button onClick={() => handleViewVideo(video.id)}>
+                        <Button onClick={() => handleViewVideo(video)}>
                           <Play className="h-4 w-4 " />
                           Watch Video
                         </Button>

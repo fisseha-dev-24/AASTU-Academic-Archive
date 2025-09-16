@@ -135,19 +135,56 @@ export default function TeacherReviews() {
     }
   }
 
+  const handlePreviewDocument = async (documentId: number) => {
+    try {
+      await apiClient.previewTeacherDocument(documentId)
+    } catch (error) {
+      console.error('Error previewing document:', error)
+      alert('Failed to preview document. Please try again.')
+    }
+  }
+
+  const handleDownloadDocument = async (documentId: number) => {
+    try {
+      await apiClient.downloadTeacherDocument(documentId)
+    } catch (error) {
+      console.error('Error downloading document:', error)
+      alert('Failed to download document. Please try again.')
+    }
+  }
+
   const unreadCount = comments.filter(comment => !comment.is_read).length
 
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <PageHeader
-        title="Department Comments"
-        subtitle={`Comments from department heads ${unreadCount > 0 ? `(${unreadCount} unread)` : ''}`}
+        title="Department Feedback"
+        subtitle={`Feedback from department heads on your document submissions ${unreadCount > 0 ? `(${unreadCount} new feedback items)` : ''}`}
         backUrl="/teacher/dashboard"
         user={user}
       />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Notification Banner */}
+        {unreadCount > 0 && (
+          <Card className="mb-6 border-l-4 border-l-blue-500 bg-blue-50">
+            <CardContent className="p-4">
+              <div className="flex items-center space-x-3">
+                <AlertCircle className="h-5 w-5 text-blue-600" />
+                <div>
+                  <h3 className="text-sm font-medium text-blue-800">
+                    You have {unreadCount} new feedback item{unreadCount > 1 ? 's' : ''} from department heads
+                  </h3>
+                  <p className="text-sm text-blue-600 mt-1">
+                    Review the feedback below and take any necessary actions on your documents.
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Filters */}
         <Card className="mb-6">
           <CardHeader>
@@ -273,8 +310,23 @@ export default function TeacherReviews() {
                         </div>
                       </div>
 
-                      <div className="bg-white p-4 rounded-lg border">
-                        <p className="text-gray-800 whitespace-pre-wrap">{comment.comment}</p>
+                      <div className={`p-4 rounded-lg border-l-4 ${
+                        comment.type === 'approval' ? 'bg-green-50 border-green-400' :
+                        comment.type === 'rejection' ? 'bg-red-50 border-red-400' :
+                        'bg-blue-50 border-blue-400'
+                      }`}>
+                        <div className="flex items-center space-x-2 mb-2">
+                          <span className={`text-sm font-medium ${
+                            comment.type === 'approval' ? 'text-green-800' :
+                            comment.type === 'rejection' ? 'text-red-800' :
+                            'text-blue-800'
+                          }`}>
+                            {comment.type === 'approval' ? '✓ Approval Feedback' :
+                             comment.type === 'rejection' ? '✗ Rejection Feedback' :
+                             '💬 General Feedback'}
+                          </span>
+                        </div>
+                        <p className="text-gray-800 whitespace-pre-wrap leading-relaxed">{comment.comment}</p>
                       </div>
                     </div>
 
@@ -289,14 +341,24 @@ export default function TeacherReviews() {
                           Mark as Read
                         </Button>
                       )}
-                      <Button 
-                        size="sm" 
-                        variant="outline"
-                        onClick={() => window.open(`/teacher/my-documents`, '_blank')}
-                      >
-                        <FileText className="h-4 w-4 mr-1" />
-                        View Document
-                      </Button>
+                      <div className="flex space-x-2">
+                        <Button 
+                          size="sm" 
+                          variant="outline"
+                          onClick={() => handlePreviewDocument(comment.document.id)}
+                        >
+                          <FileText className="h-4 w-4 mr-1" />
+                          Preview
+                        </Button>
+                        <Button 
+                          size="sm" 
+                          variant="outline"
+                          onClick={() => handleDownloadDocument(comment.document.id)}
+                        >
+                          <FileText className="h-4 w-4 mr-1" />
+                          Download
+                        </Button>
+                      </div>
                     </div>
                   </div>
                 </CardContent>

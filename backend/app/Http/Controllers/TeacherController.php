@@ -1256,8 +1256,35 @@ class TeacherController extends Controller
             ], 404);
         }
 
-        // Check if user has permission to view this document (must be the uploader)
-        if ($document->user_id !== $user->id) {
+        // Check if user has permission to view this document
+        // Teachers can preview documents they uploaded OR documents they received feedback on
+        $canPreview = false;
+        
+        // Check if user uploaded the document
+        if ($document->user_id == $user->id) {
+            $canPreview = true;
+        }
+        
+        // Check if user received feedback on this document
+        if (!$canPreview) {
+            $hasFeedback = \App\Models\DocumentComment::where('document_id', $documentId)
+                ->where('to_user_id', $user->id)
+                ->exists();
+            if ($hasFeedback) {
+                $canPreview = true;
+            }
+        }
+        
+        // Log for debugging
+        \Log::info('Teacher preview authorization check', [
+            'user_id' => $user->id,
+            'document_id' => $documentId,
+            'document_user_id' => $document->user_id,
+            'can_preview' => $canPreview,
+            'is_uploader' => $document->user_id == $user->id
+        ]);
+        
+        if (!$canPreview) {
             return response()->json([
                 'success' => false,
                 'message' => 'Access denied'
@@ -1304,8 +1331,26 @@ class TeacherController extends Controller
             ], 404);
         }
 
-        // Check if user has permission to download this document (must be the uploader)
-        if ($document->user_id !== $user->id) {
+        // Check if user has permission to download this document
+        // Teachers can download documents they uploaded OR documents they received feedback on
+        $canDownload = false;
+        
+        // Check if user uploaded the document
+        if ($document->user_id == $user->id) {
+            $canDownload = true;
+        }
+        
+        // Check if user received feedback on this document
+        if (!$canDownload) {
+            $hasFeedback = \App\Models\DocumentComment::where('document_id', $documentId)
+                ->where('to_user_id', $user->id)
+                ->exists();
+            if ($hasFeedback) {
+                $canDownload = true;
+            }
+        }
+        
+        if (!$canDownload) {
             return response()->json([
                 'success' => false,
                 'message' => 'Access denied'
